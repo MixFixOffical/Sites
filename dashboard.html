@@ -22,11 +22,17 @@
             doc, 
             getDoc,
             updateDoc,
+            setDoc,
             serverTimestamp,
             collection,
             query,
             where,
-            getDocs
+            getDocs,
+            addDoc,
+            onSnapshot,
+            orderBy,
+            deleteDoc,
+            Timestamp
         } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
         // Firebase configuration
@@ -51,6 +57,11 @@
         window.db = db;
         window.signOut = signOut;
         window.sendEmailVerification = sendEmailVerification;
+        window.firestore = {
+            doc, getDoc, updateDoc, setDoc, serverTimestamp, 
+            collection, query, where, getDocs, addDoc, onSnapshot,
+            orderBy, deleteDoc, Timestamp
+        };
         
         // Check authentication and load user data
         onAuthStateChanged(auth, async (user) => {
@@ -79,9 +90,15 @@
                     if (window.updateDashboardUI) {
                         window.updateDashboardUI(user, userDoc.data());
                     }
+                    
+                    // Load messages if on messages page
+                    if (window.loadMessages) {
+                        window.loadMessages(user.uid);
+                    }
+                    
                 } else {
                     // Create user document if it doesn't exist
-                    await updateDoc(doc(db, 'users', user.uid), {
+                    await setDoc(doc(db, 'users', user.uid), {
                         uid: user.uid,
                         email: user.email,
                         username: user.displayName || 'Пользователь',
@@ -130,6 +147,7 @@
             --success-color: #48bb78;
             --warning-color: #ed8936;
             --error-color: #f56565;
+            --messages-color: #805ad5;
             --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.15);
             --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -252,6 +270,7 @@
             text-decoration: none;
             transition: var(--transition);
             border-left: 4px solid transparent;
+            cursor: pointer;
         }
 
         .nav-item:hover {
@@ -283,6 +302,18 @@
             font-size: 0.7rem;
             padding: 2px 8px;
             border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .nav-badge.new-messages {
+            background: var(--messages-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
         /* Main Content */
@@ -315,6 +346,12 @@
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
 
         .header-left h2 {
@@ -458,6 +495,10 @@
             background: linear-gradient(135deg, #ed8936, #dd6b20);
         }
 
+        .card-icon.red {
+            background: linear-gradient(135deg, #f56565, #e53e3e);
+        }
+
         .card-content {
             font-size: 2.5rem;
             font-weight: 700;
@@ -470,356 +511,465 @@
             font-size: 0.9rem;
         }
 
-        /* Profile Card */
-        .profile-card {
-            grid-column: span 2;
-            animation-delay: 0.2s;
+        /* Messages Section */
+        .messages-section {
+            display: none;
         }
 
-        .profile-info {
+        .messages-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .messages-header {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
-        .profile-avatar {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3.5rem;
-            color: white;
-            border: 5px solid white;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .profile-details {
-            flex: 1;
-        }
-
-        .profile-name {
+        .messages-title {
             font-size: 2rem;
             font-weight: 700;
-            margin-bottom: 10px;
             color: var(--dark-color);
         }
 
-        .profile-email {
-            color: #718096;
-            margin-bottom: 20px;
-            font-size: 1.1rem;
-        }
-
-        .profile-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 10px;
-        }
-
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--dark-color);
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            color: #718096;
-            font-size: 0.9rem;
-        }
-
-        /* Verification Banner */
-        .verification-banner {
-            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
-            border: 1px solid #ffecb5;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 25px;
+        .messages-actions {
             display: flex;
-            align-items: center;
-            gap: 20px;
-            animation: pulseWarning 2s infinite;
+            gap: 15px;
         }
 
-        @keyframes pulseWarning {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.9; }
-        }
-
-        .verification-icon {
-            font-size: 2rem;
-            color: #ffc107;
-        }
-
-        .verification-content {
-            flex: 1;
-        }
-
-        .verification-title {
-            font-weight: 600;
-            color: #856404;
-            margin-bottom: 5px;
-        }
-
-        .verification-text {
-            color: #856404;
-            font-size: 0.9rem;
-            margin-bottom: 10px;
-        }
-
-        .verify-email-btn {
-            background: #856404;
+        .btn-new-message {
+            background: linear-gradient(135deg, var(--messages-color), #9f7aea);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 5px;
-            font-size: 0.9rem;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
-        }
-
-        .verify-email-btn:hover {
-            background: #6c5203;
-        }
-
-        /* Activity Feed */
-        .activity-feed {
-            margin-top: 30px;
-        }
-
-        .activity-item {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px;
-            background: white;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            transition: var(--transition);
-        }
-
-        .activity-item:hover {
-            transform: translateX(5px);
-        }
-
-        .activity-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1rem;
-        }
-
-        .activity-icon.login {
-            background: linear-gradient(135deg, #48bb78, #38a169);
-        }
-
-        .activity-icon.register {
-            background: linear-gradient(135deg, #4299e1, #3182ce);
-        }
-
-        .activity-icon.update {
-            background: linear-gradient(135deg, #ed8936, #dd6b20);
-        }
-
-        .activity-content {
-            flex: 1;
-        }
-
-        .activity-text {
-            font-weight: 500;
-            margin-bottom: 3px;
-        }
-
-        .activity-time {
-            color: #718096;
-            font-size: 0.8rem;
-        }
-
-        /* Settings Card */
-        .settings-list {
-            list-style: none;
-        }
-
-        .settings-item {
-            padding: 15px 0;
-            border-bottom: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .settings-item:last-child {
-            border-bottom: none;
-        }
-
-        .setting-label {
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .setting-label i {
-            color: var(--accent-color);
-            width: 20px;
+        .btn-new-message:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(159, 122, 234, 0.3);
         }
 
-        .toggle-switch {
-            position: relative;
-            width: 50px;
-            height: 26px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .toggle-slider {
-            position: absolute;
+        .btn-mark-all-read {
+            background: #e2e8f0;
+            color: var(--dark-color);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
             cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-mark-all-read:hover {
+            background: #cbd5e0;
+        }
+
+        .messages-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #e2e8f0;
+            color: #4a5568;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            background: #cbd5e0;
+        }
+
+        .filter-btn.active {
+            background: var(--messages-color);
+            color: white;
+        }
+
+        .messages-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .message-item {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border-left: 4px solid transparent;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .message-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-item.unread {
+            border-left-color: var(--messages-color);
+            background: rgba(159, 122, 234, 0.05);
+        }
+
+        .message-item.important {
+            border-left-color: var(--error-color);
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .message-sender {
+            font-weight: 600;
+            color: var(--dark-color);
+            font-size: 1.1rem;
+        }
+
+        .message-time {
+            color: #718096;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .message-subject {
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .message-preview {
+            color: #718096;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 10px;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .message-item:hover .message-actions {
+            opacity: 1;
+        }
+
+        .message-action-btn {
+            background: none;
+            border: none;
+            color: #718096;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: var(--transition);
+        }
+
+        .message-action-btn:hover {
+            background: #f7fafc;
+            color: var(--accent-color);
+        }
+
+        .message-action-btn.delete:hover {
+            color: var(--error-color);
+        }
+
+        .unread-badge {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: var(--messages-color);
+            border-radius: 50%;
+            margin-left: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        /* New Message Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #cbd5e0;
-            transition: .4s;
-            border-radius: 34px;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
 
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
+        .modal-overlay.show {
+            display: flex;
+            animation: fadeIn 0.3s ease;
         }
 
-        input:checked + .toggle-slider {
-            background-color: var(--accent-color);
+        .modal {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.3s ease;
         }
 
-        input:checked + .toggle-slider:before {
-            transform: translateX(24px);
+        .modal-header {
+            padding: 25px 30px;
+            background: linear-gradient(135deg, var(--messages-color), #9f7aea);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        /* Mobile Menu Button */
-        .mobile-menu-btn {
-            display: none;
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
             background: none;
             border: none;
-            color: var(--dark-color);
+            color: white;
             font-size: 1.5rem;
             cursor: pointer;
-            padding: 10px;
+            padding: 5px;
+            border-radius: 5px;
+            transition: var(--transition);
         }
 
-        /* Responsive Design */
-        @media (max-width: 1200px) {
-            .dashboard-grid {
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            }
-            
-            .profile-card {
-                grid-column: span 1;
-            }
-            
-            .profile-info {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .profile-stats {
-                grid-template-columns: repeat(3, 1fr);
-            }
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
 
-        @media (max-width: 992px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            
-            .sidebar.open {
-                transform: translateX(0);
-            }
-            
-            .main-content {
-                margin-left: 0;
-            }
-            
-            .mobile-menu-btn {
-                display: block;
-            }
-            
-            .overlay {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 99;
-            }
-            
-            .overlay.show {
-                display: block;
-            }
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+            max-height: 60vh;
         }
 
-        @media (max-width: 768px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .dashboard-header {
-                flex-direction: column;
-                gap: 20px;
-                text-align: center;
-            }
-            
-            .profile-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
+        .modal-form .form-group {
+            margin-bottom: 25px;
         }
 
-        @media (max-width: 576px) {
-            .main-content {
-                padding: 15px;
-            }
-            
-            .card {
-                padding: 20px;
-            }
-            
-            .profile-stats {
-                grid-template-columns: 1fr;
-            }
-            
-            .verification-banner {
-                flex-direction: column;
-                text-align: center;
-            }
+        .modal-form label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--dark-color);
+        }
+
+        .modal-form input,
+        .modal-form textarea,
+        .modal-form select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .modal-form input:focus,
+        .modal-form textarea:focus,
+        .modal-form select:focus {
+            outline: none;
+            border-color: var(--messages-color);
+            box-shadow: 0 5px 15px rgba(159, 122, 234, 0.1);
+        }
+
+        .modal-form textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            background: #f7fafc;
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+        }
+
+        .btn-cancel {
+            background: #e2e8f0;
+            color: var(--dark-color);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-cancel:hover {
+            background: #cbd5e0;
+        }
+
+        .btn-send {
+            background: linear-gradient(135deg, var(--messages-color), #9f7aea);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-send:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(159, 122, 234, 0.3);
+        }
+
+        /* Message Detail View */
+        .message-detail {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .message-detail.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .message-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .message-detail-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark-color);
+            margin-bottom: 10px;
+        }
+
+        .message-detail-meta {
+            display: flex;
+            gap: 20px;
+            color: #718096;
+            font-size: 0.95rem;
+        }
+
+        .message-detail-body {
+            line-height: 1.8;
+            color: var(--dark-color);
+            font-size: 1.05rem;
+            margin-bottom: 30px;
+        }
+
+        .message-detail-actions {
+            display: flex;
+            gap: 15px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+        }
+
+        .btn-back {
+            background: #e2e8f0;
+            color: var(--dark-color);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-back:hover {
+            background: #cbd5e0;
+        }
+
+        .btn-reply {
+            background: linear-gradient(135deg, var(--accent-color), #3182ce);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-reply:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(66, 153, 225, 0.3);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 30px;
+            color: #718096;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: #cbd5e0;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--dark-color);
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+            max-width: 400px;
+            margin: 0 auto 25px;
+            line-height: 1.6;
         }
 
         /* Loading State */
@@ -846,6 +996,114 @@
         @keyframes spin {
             to { transform: translate(-50%, -50%) rotate(360deg); }
         }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            }
+        }
+
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 99;
+            }
+            
+            .overlay.show {
+                display: block;
+            }
+            
+            .messages-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .messages-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+            
+            .messages-filters {
+                justify-content: center;
+            }
+            
+            .message-header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+            
+            .message-actions {
+                opacity: 1;
+                margin-top: 15px;
+            }
+            
+            .modal {
+                margin: 10px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                padding: 10px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            .messages-actions {
+                flex-direction: column;
+            }
+            
+            .btn-new-message,
+            .btn-mark-all-read {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .modal-header,
+            .modal-body,
+            .modal-footer {
+                padding: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -871,30 +1129,26 @@
         </div>
         
         <nav class="nav-menu">
-            <a href="#" class="nav-item active" id="navDashboard">
+            <a href="#" class="nav-item active" id="navDashboard" data-section="dashboard">
                 <i class="fas fa-home"></i>
                 <span class="nav-label">Главная</span>
             </a>
-            <a href="#" class="nav-item" id="navProfile">
+            <a href="#" class="nav-item" id="navMessages" data-section="messages">
+                <i class="fas fa-envelope"></i>
+                <span class="nav-label">Сообщения</span>
+                <span class="nav-badge" id="messagesBadge">0</span>
+            </a>
+            <a href="#" class="nav-item" id="navProfile" data-section="profile">
                 <i class="fas fa-user"></i>
                 <span class="nav-label">Профиль</span>
             </a>
-            <a href="#" class="nav-item" id="navSecurity">
+            <a href="#" class="nav-item" id="navSecurity" data-section="security">
                 <i class="fas fa-shield-alt"></i>
                 <span class="nav-label">Безопасность</span>
             </a>
-            <a href="#" class="nav-item" id="navSettings">
+            <a href="#" class="nav-item" id="navSettings" data-section="settings">
                 <i class="fas fa-cog"></i>
                 <span class="nav-label">Настройки</span>
-            </a>
-            <a href="#" class="nav-item" id="navActivity">
-                <i class="fas fa-history"></i>
-                <span class="nav-label">Активность</span>
-                <span class="nav-badge" id="activityBadge">3</span>
-            </a>
-            <a href="#" class="nav-item" id="navHelp">
-                <i class="fas fa-question-circle"></i>
-                <span class="nav-label">Помощь</span>
             </a>
         </nav>
     </aside>
@@ -907,8 +1161,10 @@
                 <button class="mobile-menu-btn" id="mobileMenuBtn">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h2>Личный кабинет</h2>
-                <p id="welcomeMessage">Добро пожаловать!</p>
+                <div>
+                    <h2 id="pageTitle">Личный кабинет</h2>
+                    <p id="welcomeMessage">Добро пожаловать!</p>
+                </div>
             </div>
             
             <div class="header-right">
@@ -925,149 +1181,218 @@
             </div>
         </header>
         
-        <!-- Email Verification Banner (Hidden by default) -->
-        <div class="verification-banner" id="verificationBanner" style="display: none;">
-            <div class="verification-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="verification-content">
-                <div class="verification-title">Подтвердите ваш email</div>
-                <div class="verification-text">
-                    Для полного доступа ко всем функциям и безопасности аккаунта, пожалуйста, подтвердите ваш email адрес.
-                </div>
-                <button class="verify-email-btn" id="verifyEmailBtn">Отправить письмо подтверждения</button>
-            </div>
-        </div>
-        
-        <!-- Dashboard Grid -->
-        <div class="dashboard-grid">
-            <!-- Profile Card -->
-            <div class="card profile-card">
-                <div class="profile-info">
-                    <div class="profile-avatar" id="profileAvatar">
-                        <i class="fas fa-user"></i>
+        <!-- Dashboard Content -->
+        <div class="dashboard-content" id="dashboardContent">
+            <!-- Dashboard Section -->
+            <div class="dashboard-section" id="dashboardSection">
+                <!-- Email Verification Banner -->
+                <div class="verification-banner" id="verificationBanner" style="display: none; margin-bottom: 25px;">
+                    <div class="verification-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
                     </div>
-                    <div class="profile-details">
-                        <div class="profile-name" id="profileName">Загрузка...</div>
-                        <div class="profile-email" id="profileEmail">...</div>
-                        <div class="profile-stats">
-                            <div class="stat-item">
-                                <div class="stat-value" id="memberSince">0</div>
-                                <div class="stat-label">Дней с нами</div>
+                    <div class="verification-content">
+                        <div class="verification-title">Подтвердите ваш email</div>
+                        <div class="verification-text">
+                            Для полного доступа ко всем функциям и безопасности аккаунта, пожалуйста, подтвердите ваш email адрес.
+                        </div>
+                        <button class="verify-email-btn" id="verifyEmailBtn">Отправить письмо подтверждения</button>
+                    </div>
+                </div>
+                
+                <!-- Dashboard Grid -->
+                <div class="dashboard-grid">
+                    <!-- Profile Card -->
+                    <div class="card profile-card">
+                        <div class="card-header">
+                            <div class="card-title">Мой профиль</div>
+                            <div class="card-icon purple">
+                                <i class="fas fa-user"></i>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="loginCount">1</div>
-                                <div class="stat-label">Входов</div>
+                        </div>
+                        <div class="profile-info">
+                            <div class="profile-avatar" id="profileAvatar">
+                                <i class="fas fa-user"></i>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="accountStatus">Активен</div>
-                                <div class="stat-label">Статус</div>
+                            <div class="profile-details">
+                                <div class="profile-name" id="profileName">Загрузка...</div>
+                                <div class="profile-email" id="profileEmail">...</div>
+                                <div class="profile-stats">
+                                    <div class="stat-item">
+                                        <div class="stat-value" id="memberSince">0</div>
+                                        <div class="stat-label">Дней с нами</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value" id="loginCount">1</div>
+                                        <div class="stat-label">Входов</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value" id="accountStatus">Активен</div>
+                                        <div class="stat-label">Статус</div>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Messages Card -->
+                    <div class="card" id="messagesCard">
+                        <div class="card-header">
+                            <div class="card-title">Сообщения</div>
+                            <div class="card-icon blue">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                        </div>
+                        <div class="card-content" id="unreadMessages">0</div>
+                        <div class="card-subtitle">Новых сообщений</div>
+                        <div style="margin-top: 20px;">
+                            <button class="btn-new-message" style="width: 100%;" id="goToMessagesBtn">
+                                <i class="fas fa-envelope-open-text"></i>
+                                Перейти к сообщениям
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Security Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Безопасность</div>
+                            <div class="card-icon green">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                        </div>
+                        <div class="card-content" id="securityScore">85%</div>
+                        <div class="card-subtitle">Уровень защиты аккаунта</div>
+                    </div>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="activity-feed">
+                    <h3 style="margin-bottom: 20px; color: var(--dark-color);">Недавняя активность</h3>
+                    <div class="activity-item">
+                        <div class="activity-icon login">
+                            <i class="fas fa-sign-in-alt"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-text" id="lastLoginText">Последний вход в систему</div>
+                            <div class="activity-time" id="lastLoginTime">Только что</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon register">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-text">Регистрация аккаунта</div>
+                            <div class="activity-time" id="registrationTime">Сегодня</div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Security Card -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Безопасность</div>
-                    <div class="card-icon green">
-                        <i class="fas fa-shield-alt"></i>
+            <!-- Messages Section -->
+            <div class="messages-section" id="messagesSection">
+                <div class="messages-header">
+                    <h2 class="messages-title">Сообщения</h2>
+                    <div class="messages-actions">
+                        <button class="btn-new-message" id="newMessageBtn">
+                            <i class="fas fa-plus"></i>
+                            Новое сообщение
+                        </button>
+                        <button class="btn-mark-all-read" id="markAllReadBtn">
+                            <i class="fas fa-check-double"></i>
+                            Прочитать все
+                        </button>
                     </div>
                 </div>
-                <div class="card-content" id="securityScore">85%</div>
-                <div class="card-subtitle">Уровень защиты аккаунта</div>
+                
+                <div class="messages-filters">
+                    <button class="filter-btn active" data-filter="all">Все сообщения</button>
+                    <button class="filter-btn" data-filter="unread">Непрочитанные</button>
+                    <button class="filter-btn" data-filter="important">Важные</button>
+                    <button class="filter-btn" data-filter="archived">Архив</button>
+                </div>
+                
+                <div class="messages-list" id="messagesList">
+                    <div class="empty-state" id="emptyMessagesState">
+                        <i class="fas fa-envelope-open"></i>
+                        <h3>Нет сообщений</h3>
+                        <p>У вас пока нет сообщений. Нажмите "Новое сообщение" чтобы начать общение.</p>
+                    </div>
+                </div>
             </div>
             
-            <!-- Activity Card -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Активность</div>
-                    <div class="card-icon blue">
-                        <i class="fas fa-chart-line"></i>
+            <!-- Message Detail View -->
+            <div class="message-detail" id="messageDetail">
+                <div class="message-detail-header">
+                    <div>
+                        <h2 class="message-detail-title" id="messageDetailTitle">Загрузка...</h2>
+                        <div class="message-detail-meta">
+                            <span id="messageDetailSender">От: Загрузка...</span>
+                            <span id="messageDetailTime">Время: Загрузка...</span>
+                        </div>
                     </div>
                 </div>
-                <div class="card-content" id="activityCount">3</div>
-                <div class="card-subtitle">Событий за месяц</div>
-            </div>
-            
-            <!-- Settings Card -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Настройки</div>
-                    <div class="card-icon purple">
-                        <i class="fas fa-cog"></i>
-                    </div>
+                <div class="message-detail-body" id="messageDetailBody">
+                    Загрузка содержимого сообщения...
                 </div>
-                <ul class="settings-list">
-                    <li class="settings-item">
-                        <div class="setting-label">
-                            <i class="fas fa-moon"></i>
-                            <span>Темная тема</span>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="darkModeToggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </li>
-                    <li class="settings-item">
-                        <div class="setting-label">
-                            <i class="fas fa-bell"></i>
-                            <span>Уведомления</span>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="notificationsToggle" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </li>
-                    <li class="settings-item">
-                        <div class="setting-label">
-                            <i class="fas fa-envelope"></i>
-                            <span>Email рассылка</span>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="newsletterToggle" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </li>
-                </ul>
-            </div>
-        </div>
-        
-        <!-- Recent Activity -->
-        <div class="activity-feed">
-            <h3 style="margin-bottom: 20px; color: var(--dark-color);">Недавняя активность</h3>
-            <div class="activity-item">
-                <div class="activity-icon login">
-                    <i class="fas fa-sign-in-alt"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-text" id="lastLoginText">Последний вход в систему</div>
-                    <div class="activity-time" id="lastLoginTime">Только что</div>
-                </div>
-            </div>
-            <div class="activity-item">
-                <div class="activity-icon register">
-                    <i class="fas fa-user-plus"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-text">Регистрация аккаунта</div>
-                    <div class="activity-time" id="registrationTime">Сегодня</div>
-                </div>
-            </div>
-            <div class="activity-item">
-                <div class="activity-icon update">
-                    <i class="fas fa-sync-alt"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-text">Профиль обновлен</div>
-                    <div class="activity-time" id="profileUpdateTime">Только что</div>
+                <div class="message-detail-actions">
+                    <button class="btn-back" id="backToListBtn">
+                        <i class="fas fa-arrow-left"></i>
+                        Назад к списку
+                    </button>
+                    <button class="btn-reply" id="replyMessageBtn">
+                        <i class="fas fa-reply"></i>
+                        Ответить
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-
+    
+    <!-- New Message Modal -->
+    <div class="modal-overlay" id="newMessageModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Новое сообщение</div>
+                <button class="modal-close" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form class="modal-form" id="newMessageForm">
+                    <div class="form-group">
+                        <label for="messageTo">Кому:</label>
+                        <select id="messageTo" required>
+                            <option value="">Выберите получателя</option>
+                            <option value="support">Техподдержка</option>
+                            <option value="admin">Администратор</option>
+                            <option value="all">Все пользователи</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="messageSubject">Тема:</label>
+                        <input type="text" id="messageSubject" placeholder="Тема сообщения" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="messageContent">Сообщение:</label>
+                        <textarea id="messageContent" placeholder="Введите ваше сообщение..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="markImportant">
+                            <span style="margin-left: 8px;">Пометить как важное</span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="cancelMessageBtn">Отмена</button>
+                <button class="btn-send" id="sendMessageBtn">
+                    <i class="fas fa-paper-plane"></i>
+                    Отправить
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Elements
@@ -1077,10 +1402,36 @@
             const logoutBtn = document.getElementById('logoutBtn');
             const verifyEmailBtn = document.getElementById('verifyEmailBtn');
             const verificationBanner = document.getElementById('verificationBanner');
-            const darkModeToggle = document.getElementById('darkModeToggle');
-            const notificationsToggle = document.getElementById('notificationsToggle');
-            const newsletterToggle = document.getElementById('newsletterToggle');
             const navItems = document.querySelectorAll('.nav-item');
+            const sections = {
+                dashboard: document.getElementById('dashboardSection'),
+                messages: document.getElementById('messagesSection')
+            };
+            const pageTitle = document.getElementById('pageTitle');
+            
+            // Messages elements
+            const messagesBadge = document.getElementById('messagesBadge');
+            const messagesCard = document.getElementById('messagesCard');
+            const goToMessagesBtn = document.getElementById('goToMessagesBtn');
+            const newMessageBtn = document.getElementById('newMessageBtn');
+            const markAllReadBtn = document.getElementById('markAllReadBtn');
+            const messagesList = document.getElementById('messagesList');
+            const emptyMessagesState = document.getElementById('emptyMessagesState');
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            const messageDetail = document.getElementById('messageDetail');
+            const backToListBtn = document.getElementById('backToListBtn');
+            const replyMessageBtn = document.getElementById('replyMessageBtn');
+            
+            // Modal elements
+            const newMessageModal = document.getElementById('newMessageModal');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const cancelMessageBtn = document.getElementById('cancelMessageBtn');
+            const sendMessageBtn = document.getElementById('sendMessageBtn');
+            const newMessageForm = document.getElementById('newMessageForm');
+            
+            let currentMessages = [];
+            let currentFilter = 'all';
+            let messagesListener = null;
             
             // Mobile menu toggle
             mobileMenuBtn.addEventListener('click', function() {
@@ -1091,16 +1442,34 @@
             overlay.addEventListener('click', function() {
                 sidebar.classList.remove('open');
                 overlay.classList.remove('show');
+                closeModal();
             });
             
-            // Navigation active state
+            // Navigation
             navItems.forEach(item => {
                 item.addEventListener('click', function(e) {
                     e.preventDefault();
+                    const section = this.dataset.section;
+                    
+                    // Update active nav
                     navItems.forEach(nav => nav.classList.remove('active'));
                     this.classList.add('active');
                     
-                    // Close mobile menu on click
+                    // Show corresponding section
+                    Object.values(sections).forEach(sec => {
+                        sec.style.display = 'none';
+                    });
+                    
+                    if (section === 'messages') {
+                        sections.messages.style.display = 'block';
+                        messageDetail.style.display = 'none';
+                        pageTitle.textContent = 'Сообщения';
+                    } else {
+                        sections.dashboard.style.display = 'block';
+                        pageTitle.textContent = 'Личный кабинет';
+                    }
+                    
+                    // Close mobile menu
                     if (window.innerWidth <= 992) {
                         sidebar.classList.remove('open');
                         overlay.classList.remove('show');
@@ -1108,24 +1477,420 @@
                 });
             });
             
+            // Go to messages from dashboard card
+            goToMessagesBtn.addEventListener('click', function() {
+                navItems.forEach(nav => nav.classList.remove('active'));
+                document.getElementById('navMessages').classList.add('active');
+                
+                sections.dashboard.style.display = 'none';
+                sections.messages.style.display = 'block';
+                messageDetail.style.display = 'none';
+                pageTitle.textContent = 'Сообщения';
+            });
+            
+            // Filter messages
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentFilter = this.dataset.filter;
+                    filterMessages();
+                });
+            });
+            
+            // New message modal
+            newMessageBtn.addEventListener('click', function() {
+                newMessageModal.classList.add('show');
+            });
+            
+            function closeModal() {
+                newMessageModal.classList.remove('show');
+                newMessageForm.reset();
+            }
+            
+            closeModalBtn.addEventListener('click', closeModal);
+            cancelMessageBtn.addEventListener('click', closeModal);
+            
+            // Send message
+            sendMessageBtn.addEventListener('click', async function() {
+                const to = document.getElementById('messageTo').value;
+                const subject = document.getElementById('messageSubject').value.trim();
+                const content = document.getElementById('messageContent').value.trim();
+                const important = document.getElementById('markImportant').checked;
+                
+                if (!to || !subject || !content) {
+                    showNotification('Заполните все поля', 'error');
+                    return;
+                }
+                
+                try {
+                    sendMessageBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+                    sendMessageBtn.disabled = true;
+                    
+                    const message = {
+                        to: to,
+                        subject: subject,
+                        content: content,
+                        important: important,
+                        read: false,
+                        from: window.currentUser.uid,
+                        fromName: window.userData?.username || window.currentUser.displayName || 'Пользователь',
+                        timestamp: window.firestore.Timestamp.now(),
+                        type: 'outgoing'
+                    };
+                    
+                    // Save to Firestore
+                    await window.firestore.addDoc(
+                        window.firestore.collection(window.db, 'messages'),
+                        message
+                    );
+                    
+                    showNotification('Сообщение отправлено!', 'success');
+                    closeModal();
+                    
+                    // Add to local messages
+                    currentMessages.unshift({
+                        ...message,
+                        id: 'temp-' + Date.now()
+                    });
+                    renderMessages();
+                    
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    showNotification('Ошибка отправки: ' + error.message, 'error');
+                } finally {
+                    sendMessageBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить';
+                    sendMessageBtn.disabled = false;
+                }
+            });
+            
+            // Mark all as read
+            markAllReadBtn.addEventListener('click', async function() {
+                try {
+                    const unreadMessages = currentMessages.filter(msg => !msg.read && msg.type === 'incoming');
+                    
+                    for (const msg of unreadMessages) {
+                        if (msg.id && !msg.id.startsWith('temp-')) {
+                            await window.firestore.updateDoc(
+                                window.firestore.doc(window.db, 'messages', msg.id),
+                                { read: true }
+                            );
+                        }
+                    }
+                    
+                    showNotification('Все сообщения прочитаны', 'success');
+                    
+                } catch (error) {
+                    console.error('Error marking messages as read:', error);
+                    showNotification('Ошибка обновления', 'error');
+                }
+            });
+            
+            // Load messages from Firestore
+            window.loadMessages = async function(userId) {
+                try {
+                    // Real-time listener for messages
+                    const messagesQuery = window.firestore.query(
+                        window.firestore.collection(window.db, 'messages'),
+                        window.firestore.orderBy('timestamp', 'desc')
+                    );
+                    
+                    if (messagesListener) {
+                        messagesListener(); // Unsubscribe previous listener
+                    }
+                    
+                    messagesListener = window.firestore.onSnapshot(messagesQuery, (snapshot) => {
+                        currentMessages = [];
+                        let unreadCount = 0;
+                        
+                        snapshot.forEach((doc) => {
+                            const message = { id: doc.id, ...doc.data() };
+                            
+                            // Check if message is for this user
+                            if (message.to === userId || 
+                                message.to === 'all' || 
+                                message.to === 'admin' && userId === 'admin' ||
+                                message.from === userId) {
+                                
+                                currentMessages.push(message);
+                                
+                                if (!message.read && message.type === 'incoming') {
+                                    unreadCount++;
+                                }
+                            }
+                        });
+                        
+                        // Update badge
+                        messagesBadge.textContent = unreadCount;
+                        if (unreadCount > 0) {
+                            messagesBadge.classList.add('new-messages');
+                        } else {
+                            messagesBadge.classList.remove('new-messages');
+                        }
+                        
+                        // Update dashboard card
+                        document.getElementById('unreadMessages').textContent = unreadCount;
+                        
+                        // Render messages
+                        renderMessages();
+                    });
+                    
+                } catch (error) {
+                    console.error('Error loading messages:', error);
+                    // Show sample messages if Firestore fails
+                    showSampleMessages();
+                }
+            };
+            
+            function showSampleMessages() {
+                currentMessages = [
+                    {
+                        id: 'sample1',
+                        fromName: 'Администратор',
+                        subject: 'Добро пожаловать в SecureAccess!',
+                        content: 'Рады приветствовать вас в нашей системе. Если у вас есть вопросы, обращайтесь в поддержку.',
+                        timestamp: { toDate: () => new Date(Date.now() - 3600000) },
+                        read: false,
+                        important: true,
+                        type: 'incoming'
+                    },
+                    {
+                        id: 'sample2',
+                        fromName: 'Техподдержка',
+                        subject: 'Обновление системы',
+                        content: 'Запланировано техническое обслуживание на завтра с 2:00 до 4:00 утра.',
+                        timestamp: { toDate: () => new Date(Date.now() - 7200000) },
+                        read: true,
+                        important: false,
+                        type: 'incoming'
+                    }
+                ];
+                renderMessages();
+            }
+            
+            function filterMessages() {
+                let filtered = [...currentMessages];
+                
+                switch (currentFilter) {
+                    case 'unread':
+                        filtered = filtered.filter(msg => !msg.read);
+                        break;
+                    case 'important':
+                        filtered = filtered.filter(msg => msg.important);
+                        break;
+                    case 'archived':
+                        filtered = filtered.filter(msg => msg.archived);
+                        break;
+                }
+                
+                renderMessages(filtered);
+            }
+            
+            function renderMessages(messages = currentMessages) {
+                messagesList.innerHTML = '';
+                
+                if (messages.length === 0) {
+                    emptyMessagesState.style.display = 'block';
+                    return;
+                }
+                
+                emptyMessagesState.style.display = 'none';
+                
+                messages.forEach(msg => {
+                    const messageElement = document.createElement('div');
+                    messageElement.className = `message-item ${!msg.read ? 'unread' : ''} ${msg.important ? 'important' : ''}`;
+                    messageElement.dataset.id = msg.id;
+                    
+                    const time = msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp);
+                    const timeString = formatMessageTime(time);
+                    
+                    messageElement.innerHTML = `
+                        <div class="message-header">
+                            <div class="message-sender">
+                                ${msg.fromName || 'Система'}
+                                ${!msg.read ? '<span class="unread-badge"></span>' : ''}
+                            </div>
+                            <div class="message-time">${timeString}</div>
+                        </div>
+                        <div class="message-subject">${msg.subject || 'Без темы'}</div>
+                        <div class="message-preview">${msg.content?.substring(0, 150) || ''}${msg.content?.length > 150 ? '...' : ''}</div>
+                        <div class="message-actions">
+                            <button class="message-action-btn" data-action="view">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="message-action-btn" data-action="delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    // View message
+                    messageElement.querySelector('[data-action="view"]').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        viewMessage(msg);
+                    });
+                    
+                    // Delete message
+                    messageElement.querySelector('[data-action="delete"]').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        deleteMessage(msg.id);
+                    });
+                    
+                    // Click on message
+                    messageElement.addEventListener('click', function(e) {
+                        if (!e.target.closest('.message-actions')) {
+                            viewMessage(msg);
+                        }
+                    });
+                    
+                    messagesList.appendChild(messageElement);
+                });
+            }
+            
+            async function viewMessage(message) {
+                // Mark as read if incoming
+                if (message.type === 'incoming' && !message.read && message.id && !message.id.startsWith('temp-')) {
+                    try {
+                        await window.firestore.updateDoc(
+                            window.firestore.doc(window.db, 'messages', message.id),
+                            { read: true }
+                        );
+                    } catch (error) {
+                        console.error('Error marking as read:', error);
+                    }
+                }
+                
+                // Show message detail
+                sections.messages.style.display = 'none';
+                messageDetail.style.display = 'block';
+                messageDetail.classList.add('active');
+                
+                const time = message.timestamp?.toDate ? message.timestamp.toDate() : new Date(message.timestamp);
+                
+                document.getElementById('messageDetailTitle').textContent = message.subject || 'Без темы';
+                document.getElementById('messageDetailSender').textContent = `От: ${message.fromName || 'Система'}`;
+                document.getElementById('messageDetailTime').textContent = `Время: ${formatMessageTime(time)}`;
+                document.getElementById('messageDetailBody').textContent = message.content || '';
+                
+                pageTitle.textContent = 'Просмотр сообщения';
+            }
+            
+            async function deleteMessage(messageId) {
+                if (!confirm('Удалить это сообщение?')) return;
+                
+                try {
+                    if (messageId && !messageId.startsWith('temp-')) {
+                        await window.firestore.deleteDoc(
+                            window.firestore.doc(window.db, 'messages', messageId)
+                        );
+                    }
+                    
+                    // Remove from local array
+                    currentMessages = currentMessages.filter(msg => msg.id !== messageId);
+                    renderMessages();
+                    
+                    showNotification('Сообщение удалено', 'success');
+                    
+                } catch (error) {
+                    console.error('Error deleting message:', error);
+                    showNotification('Ошибка удаления', 'error');
+                }
+            }
+            
+            // Back to list
+            backToListBtn.addEventListener('click', function() {
+                messageDetail.style.display = 'none';
+                sections.messages.style.display = 'block';
+                pageTitle.textContent = 'Сообщения';
+            });
+            
+            // Reply to message
+            replyMessageBtn.addEventListener('click', function() {
+                const subject = document.getElementById('messageDetailTitle').textContent;
+                newMessageModal.classList.add('show');
+                document.getElementById('messageSubject').value = `Re: ${subject}`;
+            });
+            
+            // Helper functions
+            function formatMessageTime(date) {
+                const now = new Date();
+                const diff = now - date;
+                
+                if (diff < 60000) return 'Только что';
+                if (diff < 3600000) return `${Math.floor(diff / 60000)} мин назад`;
+                if (diff < 86400000) return `${Math.floor(diff / 3600000)} ч назад`;
+                
+                return date.toLocaleDateString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+            }
+            
+            function showNotification(message, type = 'success') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.innerHTML = `
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                    <span>${message}</span>
+                `;
+                
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 30px;
+                    right: 30px;
+                    padding: 18px 25px;
+                    border-radius: 12px;
+                    color: white;
+                    font-weight: 500;
+                    transform: translateX(400px);
+                    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                    z-index: 1000;
+                    max-width: 380px;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                    background: ${type === 'success' ? 
+                        'linear-gradient(135deg, #48bb78, #38a169)' : 
+                        'linear-gradient(135deg, #f56565, #e53e3e)'};
+                `;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(0)';
+                }, 10);
+                
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(400px)';
+                    setTimeout(() => notification.remove(), 400);
+                }, 4000);
+            }
+            
             // Logout handler
             logoutBtn.addEventListener('click', async function() {
                 try {
                     logoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Выход...';
                     logoutBtn.disabled = true;
                     
-                    await signOut(window.auth);
+                    // Unsubscribe from messages listener
+                    if (messagesListener) {
+                        messagesListener();
+                    }
                     
-                    // Clear any cached data
+                    await window.signOut(window.auth);
+                    
+                    // Clear local data
                     localStorage.removeItem('rememberedEmail');
                     sessionStorage.clear();
                     
-                    // Redirect to login page
+                    // Redirect to login
                     window.location.href = 'index.html?success=Вы успешно вышли из системы';
                     
                 } catch (error) {
                     console.error('Logout error:', error);
-                    alert('Ошибка при выходе: ' + error.message);
+                    showNotification('Ошибка при выходе: ' + error.message, 'error');
                     
                     logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Выйти';
                     logoutBtn.disabled = false;
@@ -1138,7 +1903,7 @@
                     verifyEmailBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
                     verifyEmailBtn.disabled = true;
                     
-                    await sendEmailVerification(window.auth.currentUser);
+                    await window.sendEmailVerification(window.auth.currentUser);
                     
                     showNotification('Письмо подтверждения отправлено! Проверьте вашу почту.', 'success');
                     
@@ -1152,35 +1917,6 @@
                     verifyEmailBtn.disabled = false;
                 }
             });
-            
-            // Settings toggles
-            darkModeToggle.addEventListener('change', function() {
-                document.body.classList.toggle('dark-mode', this.checked);
-                localStorage.setItem('darkMode', this.checked);
-                showNotification(this.checked ? 'Темная тема включена' : 'Темная тема выключена', 'success');
-            });
-            
-            notificationsToggle.addEventListener('change', function() {
-                localStorage.setItem('notifications', this.checked);
-                showNotification(this.checked ? 'Уведомления включены' : 'Уведомления выключены', 'success');
-            });
-            
-            newsletterToggle.addEventListener('change', function() {
-                localStorage.setItem('newsletter', this.checked);
-                showNotification(this.checked ? 'Рассылка включена' : 'Рассылка выключена', 'success');
-            });
-            
-            // Load saved settings
-            if (localStorage.getItem('darkMode') === 'true') {
-                darkModeToggle.checked = true;
-                document.body.classList.add('dark-mode');
-            }
-            if (localStorage.getItem('notifications') === 'false') {
-                notificationsToggle.checked = false;
-            }
-            if (localStorage.getItem('newsletter') === 'false') {
-                newsletterToggle.checked = false;
-            }
             
             // Global function to update UI with user data
             window.updateDashboardUI = function(user, userData) {
@@ -1216,11 +1952,13 @@
                 
                 // Update activity times
                 document.getElementById('lastLoginTime').textContent = 
-                    formatTime(now);
+                    formatMessageTime(now);
                 document.getElementById('registrationTime').textContent = 
-                    formatDate(createdAt);
-                document.getElementById('profileUpdateTime').textContent = 
-                    formatTime(now);
+                    createdAt.toLocaleDateString('ru-RU', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                    });
                 
                 // Update welcome message
                 const hour = now.getHours();
@@ -1245,87 +1983,10 @@
                 if (daysSince < 30) securityScore += 15;
                 
                 document.getElementById('securityScore').textContent = `${securityScore}%`;
-                
-                // Update activity count
-                const activityCount = 3 + Math.floor(daysSince / 7);
-                document.getElementById('activityCount').textContent = activityCount;
-                document.getElementById('activityBadge').textContent = activityCount;
             };
             
-            // Helper functions
-            function formatTime(date) {
-                return date.toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-            }
-            
-            function formatDate(date) {
-                return date.toLocaleDateString('ru-RU', {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric'
-                });
-            }
-            
-            function showNotification(message, type = 'success') {
-                // Create notification element
-                const notification = document.createElement('div');
-                notification.className = `notification ${type}`;
-                notification.innerHTML = `
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-                    <span>${message}</span>
-                `;
-                
-                // Style the notification
-                notification.style.cssText = `
-                    position: fixed;
-                    top: 30px;
-                    right: 30px;
-                    padding: 18px 25px;
-                    border-radius: 12px;
-                    color: white;
-                    font-weight: 500;
-                    transform: translateX(400px);
-                    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-                    z-index: 1000;
-                    max-width: 380px;
-                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-                    display: flex;
-                    align-items: center;
-                    gap: 15px;
-                    background: ${type === 'success' ? 
-                        'linear-gradient(135deg, #48bb78, #38a169)' : 
-                        'linear-gradient(135deg, #f56565, #e53e3e)'};
-                `;
-                
-                document.body.appendChild(notification);
-                
-                // Animate in
-                setTimeout(() => {
-                    notification.style.transform = 'translateX(0)';
-                }, 10);
-                
-                // Remove after 4 seconds
-                setTimeout(() => {
-                    notification.style.transform = 'translateX(400px)';
-                    setTimeout(() => notification.remove(), 400);
-                }, 4000);
-            }
-            
             // Initialize
-            console.log('Dashboard initialized');
-            
-            // Auto-update last login time every minute
-            setInterval(() => {
-                const lastLoginElement = document.getElementById('lastLoginTime');
-                if (lastLoginElement) {
-                    lastLoginElement.textContent = formatTime(new Date());
-                }
-            }, 60000);
+            console.log('Dashboard with messages initialized');
         });
     </script>
 </body>
