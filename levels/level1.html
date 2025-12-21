@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tactical Prototype Enhanced</title>
+<style>
+body {
+    margin: 0;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
+    overflow: hidden;
+    font-family: 'Arial', sans-serif;
+    color: #e0e0ff;
+    user-select: none;
+}
+
+canvas {
+    display: block;
+    box-shadow: 0 0 50px rgba(0, 50, 255, 0.2);
+}
+
+#ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.ui-element {
+    position: absolute;
+    pointer-events: auto;
+}
+
+#health-bar {
+    top: 20px;
+    left: 20px;
+    width: 200px;
+    height: 25px;
+    background: rgba(30, 30, 60, 0.8);
+    border: 2px solid #3a3a8c;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#health-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #ff0040 0%, #ff5500 100%);
+    transition: width 0.3s ease;
+}
+
+#ammo {
+    top: 20px;
+    right: 20px;
+    font-size: 18px;
+    padding: 8px 15px;
+    background: rgba(30, 30, 60, 0.8);
+    border: 2px solid #3a3a8c;
+    border-radius: 4px;
+}
+
+#message {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    color: #4affff;
+    text-shadow: 0 0 10px rgba(74, 255, 255, 0.8);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    text-align: center;
+    padding: 15px 30px;
+    background: rgba(0, 0, 30, 0.7);
+    border-radius: 8px;
+    border: 1px solid #4affff;
+    pointer-events: none;
+}
+
+#controls {
+    bottom: 20px;
+    left: 20px;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 10px 15px;
+    background: rgba(30, 30, 60, 0.7);
+    border-radius: 6px;
+    border: 1px solid #3a3a8c;
+    max-width: 300px;
+}
+
+#title {
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 28px;
+    font-weight: bold;
+    color: #4affff;
+    text-shadow: 0 0 15px rgba(74, 255, 255, 0.9);
+    letter-spacing: 2px;
+}
+
+#instructions {
+    bottom: 20px;
+    right: 20px;
+    background: rgba(30, 30, 60, 0.7);
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #3a3a8c;
+    max-width: 250px;
+    font-size: 14px;
+}
+
+.instruction-item {
+    margin: 5px 0;
+    display: flex;
+    align-items: center;
+}
+
+.key {
+    display: inline-block;
+    background: rgba(60, 60, 100, 0.9);
+    padding: 2px 8px;
+    margin-right: 8px;
+    border-radius: 4px;
+    border: 1px solid #4a4aaa;
+    min-width: 20px;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Меню */
+#menu {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 30, 0.95);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 0.5s ease;
+}
+
+#menu.hidden {
+    display: none;
+}
+
+.menu-title {
+    font-size: 48px;
+    color: #4affff;
+    text-shadow: 0 0 20px rgba(74, 255, 255, 0.9);
+    margin-bottom: 40px;
+    letter-spacing: 3px;
+}
+
+.menu-subtitle {
+    font-size: 24px;
+    color: #a0a0ff;
+    margin-bottom: 60px;
+    text-align: center;
+    max-width: 600px;
+    line-height: 1.5;
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 50px;
+}
+
+.menu-button {
+    background: linear-gradient(135deg, #3a3a8c 0%, #2a2a6c 100%);
+    border: 2px solid #4a4aaa;
+    color: #e0e0ff;
+    font-size: 20px;
+    padding: 15px 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 200px;
+    text-align: center;
+}
+
+.menu-button:hover {
+    background: linear-gradient(135deg, #4a4aaa 0%, #3a3a8c 100%);
+    border-color: #5a5aff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(74, 255, 255, 0.3);
+}
+
+.menu-button:active {
+    transform: translateY(1px);
+}
+
+#difficulty-selector {
+    display: flex;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.difficulty-btn {
+    padding: 10px 20px;
+    background: rgba(60, 60, 100, 0.7);
+    border: 2px solid #4a4aaa;
+    color: #e0e0ff;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.difficulty-btn.active {
+    background: #4a4aaa;
+    border-color: #5a5aff;
+    box-shadow: 0 0 10px rgba(74, 255, 255, 0.5);
+}
+
+.menu-stats {
+    display: flex;
+    gap: 30px;
+    margin-top: 30px;
+    font-size: 18px;
+    color: #a0a0ff;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 24px;
+    color: #4affff;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+#pause-menu {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 30, 0.85);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#pause-menu.visible {
+    display: flex;
+}
+
+.pause-title {
+    font-size: 36px;
+    color: #4affff;
+    margin-bottom: 30px;
+}
+
+#score-display {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 22px;
+    background: rgba(30, 30, 60, 0.8);
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 2px solid #3a3a8c;
+    color: #4affff;
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+    <div id="title" class="ui-element">TACTICAL PROTOCOL</div>
+    <div id="health-bar" class="ui-element">
+        <div id="health-fill"></div>
+    </div>
+    <div id="ammo" class="ui-element">Патроны: ∞</div>
+    <div id="score-display" class="ui-element">Очки: 0</div>
+    <div id="message" class="ui-element"></div>
+    <div id="controls" class="ui-element">
+        <div><span class="key">WASD</span> Движение</div>
+        <div><span class="key">ЛКМ</span> Стрельба</div>
+        <div><span class="key">E</span> Открыть дверь</div>
+        <div><span class="key">R</span> Перезарядка</div>
+        <div><span class="key">ESC</span> Пауза/Меню</div>
+    </div>
+    <div id="instructions" class="ui-element">
+        <div class="instruction-item">Уничтожьте всех врагов</div>
+        <div class="instruction-item">Избегайте урона от врагов</div>
+        <div class="instruction-item">Используйте укрытия</div>
+    </div>
+</div>
+
+<!-- Главное меню -->
+<div id="menu">
+    <div class="menu-title">TACTICAL PROTOCOL</div>
+    <div class="menu-subtitle">Тактический шутер с элементами выживания. Уничтожьте всех врагов и пройдите уровень!</div>
+    
+    <div class="menu-buttons">
+        <button id="start-game" class="menu-button">НАЧАТЬ ИГРУ</button>
+        <button id="continue-game" class="menu-button">ПРОДОЛЖИТЬ</button>
+        <div id="difficulty-selector">
+            <button class="difficulty-btn active" data-difficulty="easy">ЛЕГКО</button>
+            <button class="difficulty-btn" data-difficulty="normal">НОРМАЛЬНО</button>
+            <button class="difficulty-btn" data-difficulty="hard">СЛОЖНО</button>
+        </div>
+    </div>
+    
+    <div class="menu-stats">
+        <div class="stat-item">
+            <div>Лучший счет</div>
+            <div id="best-score" class="stat-value">0</div>
+        </div>
+        <div class="stat-item">
+            <div>Пройдено уровней</div>
+            <div id="levels-completed" class="stat-value">0</div>
+        </div>
+        <div class="stat-item">
+            <div>Уничтожено врагов</div>
+            <div id="total-enemies" class="stat-value">0</div>
+        </div>
+    </div>
+</div>
+
+<!-- Меню паузы -->
+<div id="pause-menu">
+    <div class="pause-title">ПАУЗА</div>
+    <div class="menu-buttons">
+        <button id="resume-game" class="menu-button">ПРОДОЛЖИТЬ</button>
+        <button id="restart-game" class="menu-button">ЗАНОВО</button>
+        <button id="main-menu" class="menu-button">ГЛАВНОЕ МЕНЮ</button>
+    </div>
+    <div class="menu-stats">
+        <div class="stat-item">
+            <div>Текущий счет</div>
+            <div id="current-score" class="stat-value">0</div>
+        </div>
+        <div class="stat-item">
+            <div>Осталось врагов</div>
+            <div id="enemies-left" class="stat-value">0</div>
+        </div>
+        <div class="stat-item">
+            <div>Здоровье</div>
+            <div id="current-health" class="stat-value">100%</div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ================= CORE ================= */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+
+const keys = new Set();
+let mouse = {x: 0, y: 0, down: false};
+const particles = [];
+const bullets = [];
+const effects = [];
+let gameTime = 0;
+let score = 0;
+let enemies = [];
+let ammo = 30;
+let maxAmmo = 30;
+let reloading = false;
+let reloadTime = 0;
+let gameOver = false;
+let gamePaused = false;
+let gameStarted = false;
+let currentDifficulty = 'normal';
+let bestScore = localStorage.getItem('bestScore') ? parseInt(localStorage.getItem('bestScore')) : 0;
+let totalEnemiesKilled = localStorage.getItem('totalEnemiesKilled') ? parseInt(localStorage.getItem('totalEnemiesKilled')) : 0;
+let levelsCompleted = localStorage.getItem('levelsCompleted') ? parseInt(localStorage.getItem('levelsCompleted')) : 0;
+
+/* ================= UI ELEMENTS ================= */
+const healthBar = document.getElementById('health-fill');
+const ammoDisplay = document.getElementById('ammo');
+const messageDisplay = document.getElementById('message');
+const scoreDisplay = document.getElementById('score-display');
+const menu = document.getElementById('menu');
+const pauseMenu = document.getElementById('pause-menu');
+const startButton = document.getElementById('start-game');
+const continueButton = document.getElementById('continue-game');
+const resumeButton = document.getElementById('resume-game');
+const restartButton = document.getElementById('restart-game');
+const mainMenuButton = document.getElementById('main-menu');
+const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+const bestScoreDisplay = document.getElementById('best-score');
+const totalEnemiesDisplay = document.getElementById('total-enemies');
+const levelsCompletedDisplay = document.getElementById('levels-completed');
+const currentScoreDisplay = document.getElementById('current-score');
+const enemiesLeftDisplay = document.getElementById('enemies-left');
+const currentHealthDisplay = document.getElementById('current-health');
+
+/* ================= INITIALIZE UI ================= */
+bestScoreDisplay.textContent = bestScore;
+totalEnemiesDisplay.textContent = totalEnemiesKilled;
+levelsCompletedDisplay.textContent = levelsCompleted;
+
+function showMessage(text, duration = 2000) {
+    messageDisplay.textContent = text;
+    messageDisplay.style.opacity = 1;
+    setTimeout(() => {
+        messageDisplay.style.opacity = 0;
+    }, duration);
+}
+
+function updateScoreDisplay() {
+    scoreDisplay.textContent = `Очки: ${score}`;
+}
+
+function updatePauseMenuStats() {
+    currentScoreDisplay.textContent = score;
+    enemiesLeftDisplay.textContent = enemies.length;
+    currentHealthDisplay.textContent = `${Math.max(0, player.hp)}%`;
+}
+
+/* ================= INPUT ================= */
+addEventListener('keydown', e => {
+    keys.add(e.code);
+    
+    if (e.code === 'Escape') {
+        if (gameStarted && !gameOver) {
+            togglePause();
+        }
+        return;
+    }
+    
+    if (gamePaused || gameOver || !gameStarted) return;
+    
+    if (e.code === 'KeyR' && !reloading && ammo < maxAmmo) {
+        reloading = true;
+        reloadTime = 2;
+        showMessage("Перезарядка...");
+    }
+    if (e.code === 'KeyE') {
+        interactWithDoor();
+    }
+});
+
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('mousedown', () => {
+    if (gamePaused || gameOver || !gameStarted) return;
+    mouse.down = true;
+});
+addEventListener('mouseup', () => mouse.down = false);
+addEventListener('mousemove', e => {
+    const r = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - r.left;
+    mouse.y = e.clientY - r.top;
+});
+
+/* ================= GAME STATE MANAGEMENT ================= */
+function resetGame() {
+    // Сброс игрока
+    player.x = 100;
+    player.y = 300;
+    player.vx = 0;
+    player.vy = 0;
+    player.hp = 100;
+    
+    // Сброс параметров игры
+    score = 0;
+    gameTime = 0;
+    gameOver = false;
+    ammo = 30;
+    reloading = false;
+    
+    // Очистка массивов
+    particles.length = 0;
+    bullets.length = 0;
+    effects.length = 0;
+    enemies.length = 0;
+    
+    // Создание врагов в зависимости от сложности
+    let enemyCount = 3;
+    let enemyHealth = 80;
+    
+    switch(currentDifficulty) {
+        case 'easy':
+            enemyCount = 3;
+            enemyHealth = 60;
+            break;
+        case 'normal':
+            enemyCount = 5;
+            enemyHealth = 80;
+            break;
+        case 'hard':
+            enemyCount = 8;
+            enemyHealth = 100;
+            break;
+    }
+    
+    for (let i = 0; i < enemyCount; i++) {
+        const enemy = createEnemy(600 + Math.random() * 300, 400 + Math.random() * 200);
+        enemy.hp = enemyHealth;
+        enemy.maxHp = enemyHealth;
+        enemies.push(enemy);
+    }
+    
+    // Сброс дверей
+    doors.forEach(door => {
+        door.open = false;
+        door.locked = door.x === 850; // Вторая дверь остается запертой
+    });
+    
+    updateScoreDisplay();
+    updateAmmoDisplay();
+    showMessage("Уничтожьте всех врагов!", 3000);
+}
+
+function togglePause() {
+    gamePaused = !gamePaused;
+    if (gamePaused) {
+        updatePauseMenuStats();
+        pauseMenu.classList.add('visible');
+    } else {
+        pauseMenu.classList.remove('visible');
+        last = performance.now(); // Сбрасываем время для корректного расчета dt
+    }
+}
+
+function startGame() {
+    gameStarted = true;
+    gamePaused = false;
+    menu.classList.add('hidden');
+    pauseMenu.classList.remove('visible');
+    resetGame();
+    last = performance.now();
+    requestAnimationFrame(update);
+}
+
+function continueGame() {
+    gameStarted = true;
+    gamePaused = false;
+    menu.classList.add('hidden');
+    pauseMenu.classList.remove('visible');
+    last = performance.now();
+    requestAnimationFrame(update);
+}
+
+function showMainMenu() {
+    gameStarted = false;
+    gamePaused = false;
+    gameOver = false;
+    menu.classList.remove('hidden');
+    pauseMenu.classList.remove('visible');
+    
+    // Обновляем статистику в меню
+    bestScoreDisplay.textContent = bestScore;
+    totalEnemiesDisplay.textContent = totalEnemiesKilled;
+    levelsCompletedDisplay.textContent = levelsCompleted;
+}
+
+/* ================= EVENT LISTENERS ================= */
+startButton.addEventListener('click', startGame);
+continueButton.addEventListener('click', continueGame);
+resumeButton.addEventListener('click', () => {
+    gamePaused = false;
+    pauseMenu.classList.remove('visible');
+    last = performance.now();
+});
+restartButton.addEventListener('click', () => {
+    resetGame();
+    gamePaused = false;
+    pauseMenu.classList.remove('visible');
+    last = performance.now();
+});
+mainMenuButton.addEventListener('click', showMainMenu);
+
+difficultyButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        difficultyButtons.forEach(b => b.classList.remove('active'));
+        button.classList.add('active');
+        currentDifficulty = button.dataset.difficulty;
+    });
+});
+
+/* ================= WORLD ================= */
+const walls = [
+    {x: 150, y: 150, w: 250, h: 30},
+    {x: 500, y: 300, w: 40, h: 250},
+    {x: 250, y: 450, w: 350, h: 40},
+    {x: 750, y: 200, w: 30, h: 200},
+    {x: 850, y: 350, w: 200, h: 30},
+    {x: 1000, y: 200, w: 30, h: 180},
+    {x: 400, y: 100, w: 30, h: 150},
+    {x: 200, y: 600, w: 400, h: 30},
+    {x: 700, y: 500, w: 30, h: 150},
+    {x: 900, y: 550, w: 300, h: 30}
+];
+
+const doors = [
+    {x: 700, y: 200, w: 60, h: 20, open: false, locked: false},
+    {x: 850, y: 330, w: 20, h: 60, open: false, locked: true}
+];
+
+const player = {
+    x: 100,
+    y: 300,
+    vx: 0,
+    vy: 0,
+    speed: 800,
+    friction: 0.88,
+    hp: 100,
+    maxHp: 100,
+    aim: {x: 0, y: 0},
+    recoil: 0,
+    shootCD: 0,
+    radius: 15,
+    direction: 0
+};
+
+/* ================= ENEMIES ================= */
+function createEnemy(x, y) {
+    let speed, shootDelay;
+    
+    switch(currentDifficulty) {
+        case 'easy':
+            speed = 250;
+            shootDelay = 1800;
+            break;
+        case 'normal':
+            speed = 300;
+            shootDelay = 1500;
+            break;
+        case 'hard':
+            speed = 350;
+            shootDelay = 1200;
+            break;
+    }
+    
+    return {
+        x: x,
+        y: y,
+        vx: 0,
+        vy: 0,
+        radius: 18,
+        speed: speed,
+        hp: 80,
+        maxHp: 80,
+        state: 'patrol',
+        lastShot: 0,
+        shootDelay: shootDelay,
+        patrolTarget: {x: x + (Math.random() - 0.5) * 200, y: y + (Math.random() - 0.5) * 200},
+        patrolChangeTime: 0,
+        color: `hsl(${Math.random() * 60 + 300}, 70%, 50%)`
+    };
+}
+
+/* ================= HELPERS ================= */
+function clamp(v, a, b) { return Math.max(a, Math.min(v, b)); }
+
+function distance(x1, y1, x2, y2) {
+    return Math.hypot(x2 - x1, y2 - y1);
+}
+
+function createParticles(x, y, count, color) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 500,
+            vy: (Math.random() - 0.5) * 500,
+            life: 1,
+            decay: 0.02 + Math.random() * 0.03,
+            color: color,
+            size: 3 + Math.random() * 5
+        });
+    }
+}
+
+function createEffect(x, y, type) {
+    effects.push({
+        x: x,
+        y: y,
+        type: type,
+        size: 30,
+        life: 1,
+        color: type === 'hit' ? '#ff0000' : '#ffff00'
+    });
+}
+
+/* ================= COLLISION ================= */
+function checkWallCollision(obj) {
+    for (const wall of walls) {
+        if (obj.x + obj.radius > wall.x && 
+            obj.x - obj.radius < wall.x + wall.w &&
+            obj.y + obj.radius > wall.y && 
+            obj.y - obj.radius < wall.y + wall.h) {
+            
+            const dx = (obj.x - (wall.x + wall.w/2)) / (wall.w/2);
+            const dy = (obj.y - (wall.y + wall.h/2)) / (wall.h/2);
+            
+            if (Math.abs(dx) > Math.abs(dy)) {
+                obj.x = dx > 0 ? wall.x + wall.w + obj.radius : wall.x - obj.radius;
+                obj.vx *= -0.3;
+            } else {
+                obj.y = dy > 0 ? wall.y + wall.h + obj.radius : wall.y - obj.radius;
+                obj.vy *= -0.3;
+            }
+        }
+    }
+}
+
+/* ================= SHOOTING ================= */
+function shoot(x, y, tx, ty, isPlayer) {
+    if (isPlayer && (ammo <= 0 || reloading)) {
+        if (ammo <= 0) showMessage("Нет патронов! Нажми R для перезарядки");
+        return;
+    }
+    
+    if (isPlayer) {
+        ammo--;
+        updateAmmoDisplay();
+    }
+    
+    const angle = Math.atan2(ty - y, tx - x);
+    const speed = 1500;
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed;
+    
+    bullets.push({
+        x: x,
+        y: y,
+        vx: vx,
+        vy: vy,
+        life: 2,
+        radius: 3,
+        fromPlayer: isPlayer,
+        color: isPlayer ? '#4affff' : '#ff5555'
+    });
+    
+    createParticles(x, y, 10, isPlayer ? '#4affff' : '#ff5555');
+    
+    if (isPlayer) {
+        player.recoil = 10;
+        player.x -= Math.cos(angle) * 5;
+        player.y -= Math.sin(angle) * 5;
+    }
+}
+
+/* ================= INTERACTION ================= */
+function interactWithDoor() {
+    for (const door of doors) {
+        if (distance(player.x, player.y, door.x + door.w/2, door.y + door.h/2) < 80) {
+            if (door.locked) {
+                showMessage("Дверь заперта");
+            } else {
+                door.open = !door.open;
+                showMessage(door.open ? "Дверь открыта" : "Дверь закрыта");
+            }
+            break;
+        }
+    }
+}
+
+/* ================= UPDATE ================= */
+let last = performance.now();
+function update(t) {
+    if (gameOver || gamePaused || !gameStarted) {
+        if (gameOver) {
+            // После поражения автоматически показываем меню через 2 секунды
+            setTimeout(() => {
+                if (gameOver) showMainMenu();
+            }, 2000);
+        }
+        requestAnimationFrame(update);
+        return;
+    }
+    
+    const dt = (t - last) / 1000;
+    last = t;
+    gameTime += dt;
+    
+    // Обновление перезарядки
+    if (reloading) {
+        reloadTime -= dt;
+        if (reloadTime <= 0) {
+            ammo = maxAmmo;
+            reloading = false;
+            updateAmmoDisplay();
+            showMessage("Перезарядка завершена");
+        }
+    }
+    
+    // Движение игрока
+    let ax = 0, ay = 0;
+    if (keys.has('KeyA')) ax = -1;
+    if (keys.has('KeyD')) ax = 1;
+    if (keys.has('KeyW')) ay = -1;
+    if (keys.has('KeyS')) ay = 1;
+    
+    player.vx += ax * player.speed * dt;
+    player.vy += ay * player.speed * dt;
+    player.vx *= player.friction;
+    player.vy *= player.friction;
+    
+    player.x += player.vx * dt;
+    player.y += player.vy * dt;
+    
+    // Столкновение игрока со стенами
+    checkWallCollision(player);
+    
+    // Прицеливание
+    player.aim.x = mouse.x + (Math.random() * player.recoil - player.recoil/2);
+    player.aim.y = mouse.y + (Math.random() * player.recoil - player.recoil/2);
+    player.recoil *= 0.85;
+    
+    // Определяем направление взгляда игрока
+    player.direction = Math.atan2(player.aim.y - player.y, player.aim.x - player.x);
+    
+    // Стрельба игрока
+    player.shootCD -= dt;
+    if (mouse.down && player.shootCD <= 0 && !reloading) {
+        shoot(player.x, player.y, player.aim.x, player.aim.y, true);
+        player.shootCD = 0.2;
+    }
+    
+    // Обновление врагов
+    updateEnemies(dt);
+    
+    // Обновление пуль
+    updateBullets(dt);
+    
+    // Обновление частиц
+    updateParticles(dt);
+    
+    // Обновление эффектов
+    updateEffects(dt);
+    
+    // Проверка победы
+    if (enemies.length === 0) {
+        gameOver = true;
+        levelsCompleted++;
+        localStorage.setItem('levelsCompleted', levelsCompleted);
+        
+        const bonus = Math.floor(10000 / gameTime);
+        const totalScore = score + bonus;
+        
+        if (totalScore > bestScore) {
+            bestScore = totalScore;
+            localStorage.setItem('bestScore', bestScore);
+        }
+        
+        showMessage(`Победа! Итоговый счет: ${totalScore} (бонус за время: +${bonus})`, 5000);
+        setTimeout(showMainMenu, 5000);
+    }
+    
+    // Обновление UI
+    healthBar.style.width = (player.hp / player.maxHp * 100) + '%';
+    
+    draw();
+    requestAnimationFrame(update);
+}
+
+function updateAmmoDisplay() {
+    ammoDisplay.textContent = `Патроны: ${ammo}/${maxAmmo}${reloading ? ' (Перезарядка...)' : ''}`;
+}
+
+function updateEnemies(dt) {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+        
+        const distToPlayer = distance(enemy.x, enemy.y, player.x, player.y);
+        
+        if (enemy.hp <= 0) {
+            createParticles(enemy.x, enemy.y, 30, '#ff0000');
+            createEffect(enemy.x, enemy.y, 'explosion');
+            score += 100;
+            totalEnemiesKilled++;
+            localStorage.setItem('totalEnemiesKilled', totalEnemiesKilled);
+            enemies.splice(i, 1);
+            updateScoreDisplay();
+            continue;
+        }
+        
+        if (distToPlayer < 400) {
+            enemy.state = 'attack';
+        } else {
+            enemy.state = 'patrol';
+        }
+        
+        if (enemy.state === 'attack') {
+            const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+            enemy.vx += Math.cos(angle) * enemy.speed * dt * 0.5;
+            enemy.vy += Math.sin(angle) * enemy.speed * dt * 0.5;
+            
+            if (performance.now() - enemy.lastShot > enemy.shootDelay) {
+                shoot(enemy.x, enemy.y, player.x, player.y, false);
+                enemy.lastShot = performance.now();
+            }
+        } else {
+            enemy.patrolChangeTime -= dt;
+            if (enemy.patrolChangeTime <= 0 || distance(enemy.x, enemy.y, enemy.patrolTarget.x, enemy.patrolTarget.y) < 20) {
+                enemy.patrolTarget.x = enemy.x + (Math.random() - 0.5) * 300;
+                enemy.patrolTarget.y = enemy.y + (Math.random() - 0.5) * 300;
+                enemy.patrolChangeTime = 3;
+            }
+            
+            const angle = Math.atan2(enemy.patrolTarget.y - enemy.y, enemy.patrolTarget.x - enemy.x);
+            enemy.vx += Math.cos(angle) * enemy.speed * dt * 0.3;
+            enemy.vy += Math.cos(angle) * enemy.speed * dt * 0.3;
+        }
+        
+        const speed = Math.hypot(enemy.vx, enemy.vy);
+        if (speed > enemy.speed) {
+            enemy.vx = enemy.vx / speed * enemy.speed;
+            enemy.vy = enemy.vy / speed * enemy.speed;
+        }
+        enemy.vx *= 0.9;
+        enemy.vy *= 0.9;
+        
+        enemy.x += enemy.vx * dt;
+        enemy.y += enemy.vy * dt;
+        
+        checkWallCollision(enemy);
+    }
+}
+
+function updateBullets(dt) {
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        const bullet = bullets[i];
+        
+        bullet.x += bullet.vx * dt;
+        bullet.y += bullet.vy * dt;
+        bullet.life -= dt;
+        
+        let hitWall = false;
+        for (const wall of walls) {
+            if (bullet.x > wall.x && bullet.x < wall.x + wall.w &&
+                bullet.y > wall.y && bullet.y < wall.y + wall.h) {
+                hitWall = true;
+                createParticles(bullet.x, bullet.y, 5, bullet.color);
+                break;
+            }
+        }
+        
+        for (const door of doors) {
+            if (!door.open && 
+                bullet.x > door.x && bullet.x < door.x + door.w &&
+                bullet.y > door.y && bullet.y < door.y + door.h) {
+                hitWall = true;
+                createParticles(bullet.x, bullet.y, 5, bullet.color);
+                break;
+            }
+        }
+        
+        if (!bullet.fromPlayer && distance(bullet.x, bullet.y, player.x, player.y) < player.radius) {
+            player.hp -= currentDifficulty === 'hard' ? 20 : 15;
+            createEffect(player.x, player.y, 'hit');
+            if (player.hp <= 0) {
+                player.hp = 0;
+                gameOver = true;
+                showMessage("Поражение! Очки: " + score, 2000);
+            }
+            bullets.splice(i, 1);
+            continue;
+        }
+        
+        if (bullet.fromPlayer) {
+            for (const enemy of enemies) {
+                if (distance(bullet.x, bullet.y, enemy.x, enemy.y) < enemy.radius) {
+                    enemy.hp -= 25;
+                    createEffect(enemy.x, enemy.y, 'hit');
+                    bullets.splice(i, 1);
+                    break;
+                }
+            }
+        }
+        
+        if (hitWall || bullet.life <= 0) {
+            bullets.splice(i, 1);
+        }
+    }
+}
+
+function updateParticles(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 500 * dt;
+        p.life -= p.decay;
+        
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
+function updateEffects(dt) {
+    for (let i = effects.length - 1; i >= 0; i--) {
+        effects[i].life -= dt * 2;
+        if (effects[i].life <= 0) {
+            effects.splice(i, 1);
+        }
+    }
+}
+
+/* ================= DRAW ================= */
+function draw() {
+    // Фон
+    ctx.fillStyle = '#0a0a1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Сетка
+    ctx.strokeStyle = 'rgba(100, 100, 200, 0.1)';
+    ctx.lineWidth = 1;
+    const gridSize = 50;
+    for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+    
+    // Стены
+    ctx.fillStyle = '#2a2a5a';
+    ctx.strokeStyle = '#3a3a8c';
+    ctx.lineWidth = 2;
+    for (const w of walls) {
+        ctx.fillRect(w.x, w.y, w.w, w.h);
+        ctx.strokeRect(w.x, w.y, w.w, w.h);
+    }
+    
+    // Двери
+    for (const d of doors) {
+        ctx.fillStyle = d.open ? '#1a4a1a' : (d.locked ? '#8a1a1a' : '#5a1a1a');
+        ctx.fillRect(d.x, d.y, d.w, d.h);
+        ctx.strokeStyle = d.open ? '#2a8a2a' : (d.locked ? '#aa2a2a' : '#7a2a2a');
+        ctx.strokeRect(d.x, d.y, d.w, d.h);
+        
+        ctx.fillStyle = d.locked ? '#ffaa00' : '#cccccc';
+        const handleX = d.w > d.h ? d.x + d.w - 10 : d.x + d.w/2;
+        const handleY = d.w > d.h ? d.y + d.h/2 : d.y + d.h - 10;
+        ctx.beginPath();
+        ctx.arc(handleX, handleY, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Частицы
+    for (const p of particles) {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    
+    // Эффекты
+    for (const e of effects) {
+        ctx.globalAlpha = e.life;
+        ctx.strokeStyle = e.color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.size * e.life, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        if (e.type === 'explosion') {
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const x2 = e.x + Math.cos(angle) * e.size * e.life;
+                const y2 = e.y + Math.sin(angle) * e.size * e.life;
+                ctx.moveTo(e.x, e.y);
+                ctx.lineTo(x2, y2);
+            }
+            ctx.stroke();
+        }
+    }
+    ctx.globalAlpha = 1;
+    
+    // Враги
+    for (const enemy of enemies) {
+        ctx.fillStyle = enemy.color;
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.fillStyle = '#fff';
+        const eyeOffset = enemy.radius * 0.5;
+        const angleToPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+        ctx.beginPath();
+        ctx.arc(enemy.x + Math.cos(angleToPlayer) * eyeOffset, 
+                enemy.y + Math.sin(angleToPlayer) * eyeOffset, 
+                enemy.radius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(enemy.x + Math.cos(angleToPlayer) * (eyeOffset + enemy.radius * 0.15), 
+                enemy.y + Math.sin(angleToPlayer) * (eyeOffset + enemy.radius * 0.15), 
+                enemy.radius * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+        
+        if (enemy.hp < enemy.maxHp) {
+            const healthWidth = 40;
+            const healthHeight = 4;
+            const healthX = enemy.x - healthWidth/2;
+            const healthY = enemy.y - enemy.radius - 10;
+            
+            ctx.fillStyle = '#333';
+            ctx.fillRect(healthX, healthY, healthWidth, healthHeight);
+            
+            ctx.fillStyle = enemy.hp > enemy.maxHp/2 ? '#0f0' : '#ff0';
+            if (enemy.hp < enemy.maxHp/4) ctx.fillStyle = '#f00';
+            
+            ctx.fillRect(healthX, healthY, healthWidth * (enemy.hp / enemy.maxHp), healthHeight);
+        }
+    }
+    
+    // Пули
+    for (const bullet of bullets) {
+        ctx.fillStyle = bullet.color;
+        ctx.beginPath();
+        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = bullet.color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(bullet.x - bullet.vx * 0.02, bullet.y - bullet.vy * 0.02);
+        ctx.lineTo(bullet.x, bullet.y);
+        ctx.stroke();
+    }
+    
+    // Игрок
+    ctx.fillStyle = player.hp > 50 ? '#0af' : (player.hp > 25 ? '#fa0' : '#f00');
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    ctx.strokeStyle = '#4affff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(
+        player.x + Math.cos(player.direction) * 25,
+        player.y + Math.sin(player.direction) * 25
+    );
+    ctx.stroke();
+    
+    ctx.fillStyle = '#333';
+    ctx.fillRect(
+        player.x + Math.cos(player.direction) * 15 - 5,
+        player.y + Math.sin(player.direction) * 15 - 3,
+        20, 6
+    );
+    
+    // Прицел
+    const crosshairSize = 15;
+    ctx.strokeStyle = player.hp > 50 ? '#0f0' : (player.hp > 25 ? '#ff0' : '#f00');
+    ctx.lineWidth = 2;
+    
+    ctx.beginPath();
+    ctx.arc(player.aim.x, player.aim.y, crosshairSize, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(player.aim.x - crosshairSize/2, player.aim.y);
+    ctx.lineTo(player.aim.x + crosshairSize/2, player.aim.y);
+    ctx.moveTo(player.aim.x, player.aim.y - crosshairSize/2);
+    ctx.lineTo(player.aim.x, player.aim.y + crosshairSize/2);
+    ctx.stroke();
+    
+    ctx.fillStyle = '#f00';
+    ctx.beginPath();
+    ctx.arc(player.aim.x, player.aim.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Отображение очков и времени
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Время: ${Math.floor(gameTime)}с`, 20, canvas.height - 35);
+    ctx.fillText(`Врагов: ${enemies.length}`, 20, canvas.height - 60);
+    
+    // Индикатор перезарядки
+    if (reloading) {
+        ctx.fillStyle = 'rgba(255, 200, 0, 0.7)';
+        const barWidth = 100;
+        const barHeight = 10;
+        const barX = canvas.width/2 - barWidth/2;
+        const barY = canvas.height - 100;
+        
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        ctx.fillStyle = 'rgba(255, 100, 0, 0.9)';
+        ctx.fillRect(barX, barY, barWidth * (1 - reloadTime/2), barHeight);
+    }
+    
+    // Отображение сложности
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'right';
+    const difficultyText = `Сложность: ${currentDifficulty === 'easy' ? 'ЛЕГКО' : currentDifficulty === 'normal' ? 'НОРМАЛЬНО' : 'СЛОЖНО'}`;
+    ctx.fillText(difficultyText, canvas.width - 20, canvas.height - 20);
+}
+
+// Инициализация
+updateAmmoDisplay();
+showMainMenu();
+
+// Адаптация к изменению размера окна
+addEventListener('resize', () => {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+});
+
+// Автоматическое скрытие кнопки "Продолжить" при первом запуске
+continueButton.style.display = 'none';
+</script>
+</body>
+</html>
