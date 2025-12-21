@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Выбор сектора - Коридорный Бегун</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 255, 0, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(0, 255, 0, 0.05) 0%, transparent 50%);
+        }
+        
+        .header {
+            text-align: center;
+            padding: 30px;
+            border-bottom: 2px solid #0f0;
+            background: rgba(0, 20, 0, 0.7);
+            margin-bottom: 40px;
+        }
+        
+        .title {
+            font-size: 36px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #0f0;
+        }
+        
+        .subtitle {
+            color: #8f8;
+            font-size: 18px;
+        }
+        
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: transparent;
+            border: 2px solid #0f0;
+            color: #0f0;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            z-index: 100;
+            transition: all 0.3s;
+        }
+        
+        .back-button:hover {
+            background: rgba(0, 255, 0, 0.2);
+            transform: translateX(-5px);
+        }
+        
+        .levels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            padding: 0 40px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .level-card {
+            background: rgba(0, 30, 0, 0.8);
+            border: 2px solid #0f0;
+            padding: 25px;
+            position: relative;
+            min-height: 200px;
+            transition: all 0.3s;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        
+        .level-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 255, 0, 0.3);
+            background: rgba(0, 40, 0, 0.9);
+        }
+        
+        .level-card.locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+            border-color: #f00;
+        }
+        
+        .level-card.locked:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .level-card.completed {
+            border-color: #0ff;
+            background: rgba(0, 40, 40, 0.8);
+        }
+        
+        .level-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #0f0;
+        }
+        
+        .level-name {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #8f8;
+        }
+        
+        .level-desc {
+            font-size: 14px;
+            color: #cfc;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+        
+        .level-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 15px;
+        }
+        
+        .difficulty {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .easy { background: rgba(0, 255, 0, 0.2); color: #0f0; }
+        .medium { background: rgba(255, 255, 0, 0.2); color: #ff0; }
+        .hard { background: rgba(255, 0, 0, 0.2); color: #f00; }
+        
+        .lock-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 50px;
+            color: #f00;
+            opacity: 0.5;
+        }
+        
+        .completed-badge {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            color: #0ff;
+            font-size: 24px;
+        }
+        
+        .boss-warning {
+            color: #f00;
+            animation: pulse 1s infinite;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .loading-text {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #0f0;
+        }
+        
+        .loading-bar {
+            width: 300px;
+            height: 10px;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #0f0;
+            overflow: hidden;
+        }
+        
+        .loading-progress {
+            height: 100%;
+            background: #0f0;
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="window.location.href='index.html'">
+        ← ГЛАВНАЯ
+    </button>
+    
+    <div class="header">
+        <h1 class="title">ВЫБОР СЕКТОРА</h1>
+        <p class="subtitle">Выберите сектор комплекса для очистки</p>
+    </div>
+    
+    <div class="levels-grid" id="levelsGrid">
+        <!-- Уровни загружаются через JS -->
+    </div>
+    
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-text" id="loadingText">ИНИЦИАЛИЗАЦИЯ СЕКТОРА...</div>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loadingProgress"></div>
+        </div>
+    </div>
+
+    <script>
+        // Данные уровней
+        const levels = [
+            {
+                id: 1,
+                name: "СЕКТОР A: Входная зона",
+                description: "Тренировочный полигон. Отработка базовых навыков передвижения и нейтрализации угроз.",
+                difficulty: "easy",
+                fileName: "levels/level1.html",
+                monsters: 10,
+                traps: 3,
+                boss: false,
+                requirements: null
+            },
+            {
+                id: 2,
+                name: "СЕКТОР B: Исследовательский блок",
+                description: "Заброшенные лаборатории. Повышенная концентрация мутировавших образцов.",
+                difficulty: "easy",
+                fileName: "levels/level2.html",
+                monsters: 15,
+                traps: 5,
+                boss: false,
+                requirements: { completedLevel: 1 }
+            },
+            {
+                id: 3,
+                name: "СЕКТОР C: Карантинная зона",
+                description: "Изоляционные камеры нарушены. Высокий риск заражения и психологического воздействия.",
+                difficulty: "medium",
+                fileName: "levels/level3.html",
+                monsters: 20,
+                traps: 8,
+                boss: false,
+                requirements: { completedLevel: 2 }
+            },
+            {
+                id: 4,
+                name: "СЕКТОР D: Энергетический реактор",
+                description: "Нестабильный ядерный реактор. Радиация искажает реальность. Экстремальные условия.",
+                difficulty: "medium",
+                fileName: "levels/level4.html",
+                monsters: 25,
+                traps: 12,
+                boss: true,
+                requirements: { completedLevel: 3 }
+            },
+            {
+                id: 5,
+                name: "СЕКТОР E: Архивы данных",
+                description: "Хранилище запрещенных исследований. Цифровые сущности материализовались.",
+                difficulty: "hard",
+                fileName: "levels/level5.html",
+                monsters: 30,
+                traps: 15,
+                boss: false,
+                requirements: { completedLevel: 4 }
+            },
+            {
+                id: 6,
+                name: "СЕКТОР F: Бездонные шахты",
+                description: "Глубинные выработки. Гравитационные аномалии и пространственные разрывы.",
+                difficulty: "hard",
+                fileName: "levels/level6.html",
+                monsters: 35,
+                traps: 18,
+                boss: false,
+                requirements: { completedLevel: 5 }
+            },
+            {
+                id: 7,
+                name: "СЕКТОР G: Храм Древних",
+                description: "Артефакт внеземного происхождения. Реальность подчинена воле артефакта.",
+                difficulty: "hard",
+                fileName: "levels/level7.html",
+                monsters: 40,
+                traps: 20,
+                boss: true,
+                requirements: { completedLevel: 6 }
+            },
+            {
+                id: 8,
+                name: "СЕКТОР Ω: Ядро комплекса",
+                description: "Центральный процессор ИИ. Финальная битва за контроль над системой.",
+                difficulty: "hard",
+                fileName: "levels/level8.html",
+                monsters: 50,
+                traps: 25,
+                boss: true,
+                final: true,
+                requirements: { completedLevel: 7 }
+            }
+        ];
+
+        const levelsGrid = document.getElementById('levelsGrid');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        const loadingProgress = document.getElementById('loadingProgress');
+
+        // Загрузка прогресса
+        function loadProgress() {
+            const progress = JSON.parse(localStorage.getItem('gameProgress') || '{}');
+            
+            levels.forEach(level => {
+                if (progress[level.id]) {
+                    level.completed = progress[level.id].completed;
+                    level.unlocked = progress[level.id].unlocked || false;
+                } else {
+                    level.completed = false;
+                    // Первый уровень всегда открыт
+                    level.unlocked = level.id === 1;
+                }
+                
+                // Проверка требований
+                if (level.requirements && level.requirements.completedLevel) {
+                    const requiredLevel = levels.find(l => l.id === level.requirements.completedLevel);
+                    if (requiredLevel && requiredLevel.completed) {
+                        level.unlocked = true;
+                    }
+                }
+            });
+            
+            // Сохраняем обновленный прогресс
+            saveProgress();
+        }
+
+        function saveProgress() {
+            const progress = {};
+            levels.forEach(level => {
+                progress[level.id] = {
+                    completed: level.completed || false,
+                    unlocked: level.unlocked || false,
+                    name: level.name
+                };
+            });
+            localStorage.setItem('gameProgress', JSON.stringify(progress));
+        }
+
+        // Создание карточек уровней
+        function createLevelCards() {
+            levelsGrid.innerHTML = '';
+            
+            levels.forEach(level => {
+                const card = document.createElement('div');
+                card.className = `level-card ${level.completed ? 'completed' : ''} ${!level.unlocked ? 'locked' : ''}`;
+                
+                if (level.unlocked) {
+                    card.addEventListener('click', () => startLevel(level));
+                }
+                
+                card.innerHTML = `
+                    <div class="level-number">СЕКТОР ${String.fromCharCode(64 + level.id)}</div>
+                    <div class="level-name">${level.name}</div>
+                    <div class="difficulty ${level.difficulty}">
+                        ${level.difficulty === 'easy' ? 'ЛЁГКИЙ' : 
+                          level.difficulty === 'medium' ? 'СРЕДНИЙ' : 'СЛОЖНЫЙ'}
+                    </div>
+                    
+                    <div class="level-desc">${level.description}</div>
+                    
+                    <div class="level-stats">
+                        <div>УГРОЗ: ${level.monsters}</div>
+                        <div>ЛОВУШЕК: ${level.traps}</div>
+                        <div>${level.boss ? 'БОСС' : 'ОБЫЧНЫЙ'}</div>
+                    </div>
+                    
+                    ${level.boss ? '<div class="boss-warning">⚠ ОПАСНОСТЬ ВЫСОКОГО УРОВНЯ ⚠</div>' : ''}
+                    ${level.final ? '<div style="color:#ff0; margin-top:10px; font-weight:bold;">ФИНАЛЬНАЯ МИССИЯ</div>' : ''}
+                    
+                    ${!level.unlocked ? '<div class="lock-icon">🔒</div>' : ''}
+                    ${level.completed ? '<div class="completed-badge">✓ ВЫПОЛНЕНО</div>' : ''}
+                `;
+                
+                levelsGrid.appendChild(card);
+            });
+        }
+
+        // Запуск уровня
+        function startLevel(level) {
+            loadingText.textContent = `ЗАГРУЗКА СЕКТОРА ${String.fromCharCode(64 + level.id)}...`;
+            loadingOverlay.style.display = 'flex';
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15 + 5;
+                if (progress > 100) progress = 100;
+                loadingProgress.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        window.location.href = level.fileName;
+                    }, 500);
+                }
+            }, 100);
+        }
+
+        // Инициализация
+        window.addEventListener('load', () => {
+            loadProgress();
+            createLevelCards();
+        });
+
+        // Автосохранение
+        window.addEventListener('beforeunload', saveProgress);
+    </script>
+</body>
+</html>

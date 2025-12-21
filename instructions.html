@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>База данных - Коридорный Бегун</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 255, 0, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(0, 255, 0, 0.05) 0%, transparent 50%);
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 20px 30px;
+            border-bottom: 3px solid #0f0;
+            background: rgba(0, 20, 0, 0.8);
+            position: relative;
+            margin-bottom: 40px;
+        }
+        
+        .title {
+            font-size: 42px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px #0f0;
+            letter-spacing: 4px;
+            animation: titleGlow 3s infinite;
+        }
+        
+        @keyframes titleGlow {
+            0%, 100% { text-shadow: 0 0 10px #0f0; }
+            50% { text-shadow: 0 0 25px #0f0; }
+        }
+        
+        .subtitle {
+            color: #8f8;
+            font-size: 20px;
+        }
+        
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: transparent;
+            border: 2px solid #0f0;
+            color: #0f0;
+            padding: 12px 25px;
+            cursor: pointer;
+            font-family: inherit;
+            z-index: 1000;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+        
+        .back-button:hover {
+            background: rgba(0, 255, 0, 0.2);
+            transform: translateX(-5px);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 30px 60px;
+        }
+        
+        .sections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .section {
+            background: rgba(0, 30, 0, 0.85);
+            border: 2px solid #0f0;
+            padding: 30px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 0, 0.2);
+            background: rgba(0, 40, 0, 0.9);
+        }
+        
+        .section-title {
+            font-size: 24px;
+            color: #0ff;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0f0;
+            position: relative;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100px;
+            height: 2px;
+            background: #0ff;
+        }
+        
+        .info-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .info-list li {
+            margin-bottom: 15px;
+            padding-left: 25px;
+            position: relative;
+            line-height: 1.6;
+        }
+        
+        .info-list li::before {
+            content: '▶';
+            position: absolute;
+            left: 0;
+            color: #0f0;
+        }
+        
+        .key {
+            display: inline-block;
+            background: rgba(0, 255, 0, 0.15);
+            border: 1px solid #0f0;
+            padding: 3px 8px;
+            margin: 0 5px;
+            border-radius: 4px;
+            font-family: monospace;
+            min-width: 30px;
+            text-align: center;
+        }
+        
+        .key-combo {
+            margin: 5px 0;
+        }
+        
+        .danger {
+            color: #f00;
+        }
+        
+        .warning {
+            color: #ff0;
+        }
+        
+        .success {
+            color: #0f0;
+        }
+        
+        .info {
+            color: #0ff;
+        }
+        
+        .enemy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .enemy-card {
+            background: rgba(20, 0, 0, 0.7);
+            border: 1px solid #f00;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .enemy-name {
+            color: #f00;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .trap-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .trap-card {
+            background: rgba(20, 20, 0, 0.7);
+            border: 1px solid #ff0;
+            padding: 15px;
+        }
+        
+        .trap-name {
+            color: #ff0;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .trap-effect {
+            font-size: 14px;
+            color: #fff;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #0f0;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #0f0;
+            transition: width 0.3s;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 40, 0, 0.5);
+            border: 1px solid #0f0;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            color: #0ff;
+            font-weight: bold;
+        }
+        
+        .terminal-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.1;
+        }
+        
+        .terminal-line {
+            position: absolute;
+            color: rgba(0, 255, 0, 0.3);
+            font-family: monospace;
+            white-space: nowrap;
+            animation: terminalScroll 20s linear infinite;
+        }
+        
+        @keyframes terminalScroll {
+            0% { transform: translateY(-100px) translateX(-100px); }
+            100% { transform: translateY(100vh) translateX(100px); }
+        }
+        
+        .code-block {
+            background: rgba(0, 20, 0, 0.8);
+            border: 1px solid #0f0;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            overflow-x: auto;
+            color: #8f8;
+        }
+        
+        .section-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            opacity: 0.5;
+        }
+        
+        @media (max-width: 768px) {
+            .sections-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 0 20px 40px;
+            }
+            
+            .title {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Фоновый эффект терминала -->
+    <div class="terminal-effect" id="terminalEffect"></div>
+    
+    <button class="back-button" onclick="window.location.href='index.html'">
+        ← НА ГЛАВНУЮ
+    </button>
+    
+    <div class="header">
+        <h1 class="title">БАЗА ДАННЫХ СИСТЕМЫ</h1>
+        <p class="subtitle">Полный справочник по комплексу и протоколам безопасности</p>
+    </div>
+    
+    <div class="container">
+        <!-- Секция управления -->
+        <div class="section">
+            <div class="section-icon">🎮</div>
+            <h2 class="section-title">УПРАВЛЕНИЕ И КОНТРОЛЬ</h2>
+            <ul class="info-list">
+                <li>
+                    <strong>Передвижение оператора:</strong>
+                    <div class="key-combo">
+                        <span class="key">W</span> / <span class="key">↑</span> - Движение вперед
+                    </div>
+                    <div class="key-combo">
+                        <span class="key">S</span> / <span class="key">↓</span> - Движение назад
+                    </div>
+                    <div class="key-combo">
+                        <span class="key">A</span> / <span class="key">←</span> - Движение влево
+                    </div>
+                    <div class="key-combo">
+                        <span class="key">D</span> / <span class="key">→</span> - Движение вправо
+                    </div>
+                </li>
+                <li>
+                    <strong>Боевые протоколы:</strong>
+                    <div class="key-combo">
+                        <span class="key">ПРОБЕЛ</span> - Активация эмиттера ближнего боя
+                    </div>
+                    <div class="warning">Радиус поражения: 50px. Перезарядка: 200ms</div>
+                </li>
+                <li>
+                    <strong>Системные команды:</strong>
+                    <div class="key-combo">
+                        <span class="key">P</span> - Приостановка миссии
+                    </div>
+                    <div class="key-combo">
+                        <span class="key">M</span> - Включение/выключение аудиосистемы
+                    </div>
+                    <div class="key-combo">
+                        <span class="key">ESC</span> - Вызов меню экстренной остановки
+                    </div>
+                </li>
+                <li>
+                    <strong>Мышь:</strong> Наведение для прицеливания (если активировано в настройках)
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Секция интерфейса -->
+        <div class="section">
+            <div class="section-icon">📊</div>
+            <h2 class="section-title">ИНТЕРФЕЙС ОПЕРАТОРА</h2>
+            <ul class="info-list">
+                <li>
+                    <strong>Панель статуса (левый верхний угол):</strong>
+                    <div class="code-block">
+[СЕКТОР A: Входная зона]
+Статус: АКТИВЕН
+Здоровье: ████████░░ 80/100
+Убито: 5/10
+Время: 02:45
+                    </div>
+                </li>
+                <li>
+                    <strong>Индикатор здоровья:</strong>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 80%"></div>
+                    </div>
+                    <span class="success">100-51%: АКТИВЕН</span> | 
+                    <span class="warning">50-26%: ПОВРЕЖДЁН</span> | 
+                    <span class="danger">25-0%: КРИТИЧЕСКИ</span>
+                </li>
+                <li>
+                    <strong>Цели миссии (правый верхний угол):</strong>
+                    Отображает основные и дополнительные задачи сектора
+                </li>
+                <li>
+                    <strong>Панель управления (нижний левый угол):</strong>
+                    Быстрый доступ к командам и подсказкам по управлению
+                </li>
+                <li>
+                    <strong>Эффекты состояния:</strong> При активации ловушек появляются визуальные эффекты на весь экран
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Секция врагов -->
+        <div class="section">
+            <div class="section-icon">👾</div>
+            <h2 class="section-title">КЛАССИФИКАЦИЯ УГРОЗ</h2>
+            
+            <div class="enemy-grid">
+                <div class="enemy-card">
+                    <div class="enemy-name">СТАНДАРТНАЯ УГРОЗА</div>
+                    <div>Здоровье: 20 HP</div>
+                    <div>Урон: 2 HP/сек</div>
+                    <div>Скорость: нормальная</div>
+                    <div class="warning">Атакует при приближении</div>
+                </div>
+                
+                <div class="enemy-card">
+                    <div class="enemy-name">БЫСТРАЯ УГРОЗА</div>
+                    <div>Здоровье: 15 HP</div>
+                    <div>Урон: 1 HP/сек</div>
+                    <div>Скорость: высокая</div>
+                    <div class="danger">Быстрое преследование</div>
+                </div>
+                
+                <div class="enemy-card">
+                    <div class="enemy-name">БОСС-УГРОЗА</div>
+                    <div>Здоровье: 100+ HP</div>
+                    <div>Урон: 5-10 HP/сек</div>
+                    <div>Скорость: переменная</div>
+                    <div class="danger">Особые атаки</div>
+                </div>
+            </div>
+            
+            <ul class="info-list" style="margin-top: 20px;">
+                <li><span class="danger">ВАЖНО:</span> Угрозы преследуют оператора автоматически</li>
+                <li>Быстрые угрозы появляются чаще на высоких уровнях</li>
+                <li>Босс-угрозы имеют уникальные паттерны атаки</li>
+                <li>Радиус атаки эмиттера эффективен против всех типов</li>
+            </ul>
+        </div>
+        
+        <!-- Секция ловушек -->
+        <div class="section">
+            <div class="section-icon">⚠️</div>
+            <h2 class="section-title">СИСТЕМА БЕЗОПАСНОСТИ И ЛОВУШКИ</h2>
+            
+            <div class="trap-grid">
+                <div class="trap-card">
+                    <div class="trap-name">ОСЛЕПЛЕНИЕ</div>
+                    <div class="trap-effect">
+                        <strong>Визуально:</strong> Желтый круг с иконкой 👁<br>
+                        <strong>Эффект:</strong> Размытие экрана на 3 секунды<br>
+                        <strong>Урон:</strong> 15 HP<br>
+                        <strong>Тактика:</strong> Запомнить расположение
+                    </div>
+                </div>
+                
+                <div class="trap-card">
+                    <div class="trap-name">ОТРАВЛЕНИЕ</div>
+                    <div class="trap-effect">
+                        <strong>Визуально:</strong> Зеленый круг с иконкой ☠<br>
+                        <strong>Эффект:</strong> Зеленый фильтр + постепенный урон<br>
+                        <strong>Урон:</strong> 10 HP + 1 HP/сек (5 сек)<br>
+                        <strong>Тактика:</strong> Быстро покинуть зону
+                    </div>
+                </div>
+                
+                <div class="trap-card">
+                    <div class="trap-name">ПАДЕНИЕ</div>
+                    <div class="trap-effect">
+                        <strong>Визуально:</strong> Красный круг с иконкой ↓<br>
+                        <strong>Эффект:</strong> Тряска экрана на 2 секунды<br>
+                        <strong>Урон:</strong> 25 HP<br>
+                        <strong>Тактика:</strong> Максимально избегать
+                    </div>
+                </div>
+            </div>
+            
+            <ul class="info-list" style="margin-top: 20px;">
+                <li>Ловушки пульсируют для визуального оповещения</li>
+                <li>После активации ловушки отключаются</li>
+                <li>На высоких уровнях количество ловушек увеличивается</li>
+                <li>Босс-уровни могут иметь комбинированные ловушки</li>
+            </ul>
+        </div>
+        
+        <!-- Секция игрового процесса -->
+        <div class="section">
+            <div class="section-icon">🎯</div>
+            <h2 class="section-title">ТАКТИКА И СТРАТЕГИЯ</h2>
+            <ul class="info-list">
+                <li>
+                    <strong>Базовый патруль:</strong>
+                    <div class="code-block">
+1. Осмотрите коридоры
+2. Отметьте расположение ловушек
+3. Выманивайте угрозы по одной
+4. Используйте коридоры для уклонения
+                    </div>
+                </li>
+                <li>
+                    <strong>Эффективная атака:</strong>
+                    <div class="warning">Не входите в плотную группу угроз</div>
+                    <div class="success">Атакуйте с безопасного расстояния (макс. 50px)</div>
+                    <div class="info">Используйте повороты коридоров для укрытия</div>
+                </li>
+                <li>
+                    <strong>Управление здоровьем:</strong>
+                    <div class="danger">Избегайте одновременных атак нескольких угроз</div>
+                    <div class="warning">Приоритет: сначала ловушки, потом угрозы</div>
+                    <div class="success">На высоких уровнях здоровье не восстанавливается</div>
+                </li>
+                <li>
+                    <strong>Завершение уровней:</strong>
+                    <div>Каждый сектор имеет цель по количеству уничтоженных угроз</div>
+                    <div>После выполнения цели активируется выход</div>
+                    <div>Дополнительные цели: минимизация урона и времени</div>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Секция прогресса -->
+        <div class="section">
+            <div class="section-icon">📈</div>
+            <h2 class="section-title">СИСТЕМА ПРОГРЕССА</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="completedLevels">0</div>
+                    <div>Пройдено секторов</div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-value" id="totalKills">0</div>
+                    <div>Уничтожено угроз</div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-value" id="playTime">0</div>
+                    <div>Часов игры</div>
+                </div>
+            </div>
+            
+            <ul class="info-list" style="margin-top: 20px;">
+                <li>Прогресс автоматически сохраняется в локальном хранилище</li>
+                <li>Для разблокировки сектора необходимо пройти предыдущий</li>
+                <li>Статистика включает: убийства, время, полученный урон</li>
+                <li>Прогресс можно сбросить через консоль разработчика</li>
+            </ul>
+            
+            <div class="code-block" style="margin-top: 15px;">
+// Сброс прогресса (в консоли браузера)
+localStorage.removeItem('gameProgress');
+console.log('Прогресс сброшен');
+            </div>
+        </div>
+        
+        <!-- Секция уровней -->
+        <div class="section">
+            <div class="section-icon">🗺️</div>
+            <h2 class="section-title">СТРУКТУРА КОМПЛЕКСА</h2>
+            
+            <div class="code-block" style="margin: 15px 0;">
+СЕКТОР A: Входная зона        [Лёгкий]      - Обучение
+СЕКТОР B: Исследовательский блок [Лёгкий]   - Мутанты
+СЕКТОР C: Карантинная зона    [Средний]     - Инфекции
+СЕКТОР D: Энергетический реактор [Средний]  - БОСС: Реактор
+СЕКТОР E: Архивы данных       [Сложный]     - Цифровые сущности
+СЕКТОР F: Бездонные шахты     [Сложный]     - Гравитационные аномалии
+СЕКТОР G: Храм Древних        [Сложный]     - БОСС: Древнее зло
+СЕКТОР Ω: Ядро комплекса      [Экстремальный] - ФИНАЛЬНЫЙ БОСС
+            </div>
+            
+            <ul class="info-list">
+                <li>Каждый сектор увеличивает сложность на 20%</li>
+                <li>Босс-секторы содержат уникальные механики</li>
+                <li>Финальный сектор включает все типы угроз и ловушек</li>
+                <li>Секретные достижения за особые тактики прохождения</li>
+            </ul>
+        </div>
+        
+        <!-- Секция устранения неполадок -->
+        <div class="section">
+            <div class="section-icon">🔧</div>
+            <h2 class="section-title">УСТРАНЕНИЕ НЕПОЛАДОК</h2>
+            <ul class="info-list">
+                <li>
+                    <strong>Игра не запускается:</strong>
+                    <div>1. Проверьте поддержку JavaScript</div>
+                    <div>2. Очистите кэш браузера (Ctrl+F5)</div>
+                    <div>3. Проверьте консоль на ошибки (F12)</div>
+                </li>
+                <li>
+                    <strong>Нет звука:</strong>
+                    <div>1. Нажмите <span class="key">M</span> для включения</div>
+                    <div>2. Проверьте настройки звука браузера</div>
+                    <div>3. Автовоспроизведение может быть заблокировано</div>
+                </li>
+                <li>
+                    <strong>Прогресс не сохраняется:</strong>
+                    <div>1. Разрешите cookies и локальное хранилище</div>
+                    <div>2. Не используйте режим инкогнито</div>
+                    <div>3. Экспортируйте прогресс через консоль</div>
+                </li>
+                <li>
+                    <strong>Низкая производительность:</strong>
+                    <div>1. Закройте лишние вкладки</div>
+                    <div>2. Уменьшите разрешение окна браузера</div>
+                    <div>3. Отключите аппаратное ускорение если проблема в нём</div>
+                </li>
+            </ul>
+            
+            <div class="code-block" style="margin-top: 15px;">
+// Экспорт прогресса (в консоли браузера)
+const progress = localStorage.getItem('gameProgress');
+console.log('Ваш прогресс:', progress);
+            </div>
+        </div>
+        
+        <!-- Секция разработчиков -->
+        <div class="section">
+            <div class="section-icon">💻</div>
+            <h2 class="section-title">ИНФОРМАЦИЯ О РАЗРАБОТКЕ</h2>
+            <ul class="info-list">
+                <li><strong>Версия игры:</strong> 1.0.0 "Коридорный Бегун"</li>
+                <li><strong>Технологии:</strong> HTML5, CSS3, Vanilla JavaScript</li>
+                <li><strong>Графика:</strong> Canvas 2D API</li>
+                <li><strong>Звук:</strong> Web Audio API, внешние ресурсы</li>
+                <li><strong>Сохранение:</strong> LocalStorage API</li>
+                <li><strong>Кросс-платформенность:</strong> Работает во всех современных браузерах</li>
+                <li><strong>Исходный код:</strong> Доступен для изучения через DevTools</li>
+            </ul>
+            
+            <div style="margin-top: 20px; padding: 15px; background: rgba(0,40,40,0.5); border: 1px solid #0ff;">
+                <strong class="info">СОВЕТЫ ДЛЯ РАЗРАБОТЧИКОВ:</strong>
+                <div style="margin-top: 10px; font-size: 14px;">
+                    1. Для модификации игры используйте консоль разработчика<br>
+                    2. Уровни находятся в папке /levels/<br>
+                    3. Конфигурация каждого уровня в начале файла<br>
+                    4. Музыка и звуки загружаются из внешних источников<br>
+                    5. Игра не требует серверной части
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Создание эффекта терминала
+        function createTerminalEffect() {
+            const terminalEffect = document.getElementById('terminalEffect');
+            const lines = [
+                '> SYSTEM BOOT COMPLETE',
+                '> LOADING SECURITY PROTOCOLS',
+                '> INITIALIZING DATABASE...',
+                '> WELCOME, OPERATOR',
+                '> ACCESS LEVEL: CLEARANCE 7',
+                '> SCANNING FOR THREATS...',
+                '> ALL SYSTEMS NOMINAL',
+                '> READY FOR MISSION BRIEFING',
+                '> CONNECTING TO MAINFRAME...',
+                '> ENCRYPTION: AES-256 ACTIVE',
+                '> UPLOADING TACTICAL DATA...',
+                '> MISSION PARAMETERS SET',
+                '> STANDING BY FOR ORDERS',
+                '> SECURITY FEED: ONLINE',
+                '> BIOMETRICS: STABLE',
+                '> WEAPONS SYSTEMS: ARMED',
+                '> COMM-LINK: ESTABLISHED'
+            ];
+            
+            // Создаем 10 случайных строк
+            for (let i = 0; i < 10; i++) {
+                const line = document.createElement('div');
+                line.className = 'terminal-line';
+                line.textContent = lines[Math.floor(Math.random() * lines.length)];
+                line.style.left = Math.random() * 100 + 'vw';
+                line.style.fontSize = (12 + Math.random() * 6) + 'px';
+                line.style.animationDelay = Math.random() * 5 + 's';
+                line.style.animationDuration = (15 + Math.random() * 10) + 's';
+                terminalEffect.appendChild(line);
+            }
+        }
+        
+        // Загрузка статистики
+        function loadStatistics() {
+            const progress = JSON.parse(localStorage.getItem('gameProgress') || '{}');
+            let completed = 0;
+            let totalKills = 0;
+            let totalTime = 0;
+            
+            for (let i = 1; i <= 8; i++) {
+                if (progress[i] && progress[i].completed) {
+                    completed++;
+                    totalKills += progress[i].kills || 0;
+                    totalTime += progress[i].time || 0;
+                }
+            }
+            
+            document.getElementById('completedLevels').textContent = completed;
+            document.getElementById('totalKills').textContent = totalKills;
+            document.getElementById('playTime').textContent = (totalTime / 3600).toFixed(1);
+        }
+        
+        // Анимация заголовков секций
+        function animateSections() {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach((section, index) => {
+                setTimeout(() => {
+                    section.style.opacity = '0';
+                    section.style.transform = 'translateY(20px)';
+                    
+                    setTimeout(() => {
+                        section.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+                        section.style.opacity = '1';
+                        section.style.transform = 'translateY(0)';
+                    }, 50);
+                }, index * 100);
+            });
+        }
+        
+        // Эффект при наведении на клавиши
+        function setupKeyEffects() {
+            const keys = document.querySelectorAll('.key');
+            keys.forEach(key => {
+                key.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.2)';
+                    this.style.background = 'rgba(0, 255, 0, 0.3)';
+                    this.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.5)';
+                    
+                    // Звук наведения
+                    const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ');
+                    audio.volume = 0.05;
+                    audio.play().catch(() => {});
+                });
+                
+                key.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                    this.style.background = 'rgba(0, 255, 0, 0.15)';
+                    this.style.boxShadow = 'none';
+                });
+            });
+        }
+        
+        // Инициализация
+        window.addEventListener('load', () => {
+            createTerminalEffect();
+            loadStatistics();
+            animateSections();
+            setupKeyEffects();
+            
+            // Обновление статистики каждые 10 секунд
+            setInterval(loadStatistics, 10000);
+            
+            // Эффект мигания заголовка
+            const title = document.querySelector('.title');
+            setInterval(() => {
+                title.style.textShadow = title.style.textShadow.includes('25px') 
+                    ? '0 0 10px #0f0'
+                    : '0 0 25px #0f0';
+            }, 1500);
+            
+            // Добавление случайных строк в терминал
+            setInterval(() => {
+                const terminalEffect = document.getElementById('terminalEffect');
+                if (terminalEffect.children.length < 20) {
+                    const lines = [
+                        '> SCANNING...', '> DATA STREAM ACTIVE', 
+                        '> ENCRYPTION VERIFIED', '> SYSTEM NOMINAL'
+                    ];
+                    const line = document.createElement('div');
+                    line.className = 'terminal-line';
+                    line.textContent = lines[Math.floor(Math.random() * lines.length)];
+                    line.style.left = Math.random() * 100 + 'vw';
+                    line.style.fontSize = (12 + Math.random() * 6) + 'px';
+                    line.style.animationDuration = (15 + Math.random() * 10) + 's';
+                    terminalEffect.appendChild(line);
+                    
+                    // Удаление старых строк
+                    if (terminalEffect.children.length > 15) {
+                        terminalEffect.removeChild(terminalEffect.children[0]);
+                    }
+                }
+            }, 5000);
+        });
+        
+        // Клавиатурные сокращения
+        document.addEventListener('keydown', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'escape':
+                    window.location.href = 'index.html';
+                    break;
+                case 'h':
+                    // Выделение всех заголовков
+                    document.querySelectorAll('.section-title').forEach(title => {
+                        title.style.background = 'rgba(0, 255, 0, 0.2)';
+                        setTimeout(() => title.style.background = '', 1000);
+                    });
+                    break;
+                case 'r':
+                    // Перезагрузка статистики
+                    loadStatistics();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
